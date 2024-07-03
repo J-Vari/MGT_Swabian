@@ -12,7 +12,7 @@ options(scipen=999)
 
 # *read raw data*
 
-questionnaire <- read_delim(here("raw data", "data_exp_questionnaire-ry6q-31.csv"), col_names = TRUE, delim = ",")
+questionnaire <- read_delim(here("raw data", "data_exp_86579-v59_questionnaire-ry6q.csv"), col_names = TRUE, delim = ",")
 as_tibble(questionnaire)
 questionnaire
 
@@ -22,10 +22,10 @@ colnames (questionnaire)
 
 questionnaire%>%
   filter(`Event Index` != "END OF FILE")%>%
-select ("Participant Public ID", "Participant Status", "UTC Timestamp", "Participant OS", "Participant Browser", "Task Name", "counterbalance-nimi", "counterbalance-x3xi", "counterbalance-xq3l", "randomiser-rtb5", "age", "gender", "state_of_residence", "education_school", "education_profession1", "education_profession2", "income", "profession", "profession-text", starts_with("languages_caregiver1"), starts_with("languages-caregiver2"), starts_with("political_"), "other_languages", "own_dialect", "own_dialect-quantised", "party", "party-text", "party-quantised", matches("^social_desirability_[A-I]-quantised$"), matches("^populism_[A-D]$"))-> questionnaire
+select ("Participant Public ID", "Participant Private ID", "Participant Status", "UTC Timestamp", "Participant OS", "Participant Browser", "Task Name", "counterbalance-nimi", "counterbalance-x3xi", "counterbalance-xq3l", "randomiser-rtb5", "age", "gender", "state_of_residence", "education_school", "education_profession1", "education_profession2", "income", "profession", "profession-text", starts_with("languages_caregiver1"), starts_with("languages-caregiver2"), starts_with("political_"), "other_languages", "own_dialect", "own_dialect-quantised", "party", "party-text", "party-quantised", matches("^social_desirability_[A-I]-quantised$"), matches("^populism_[A-D]$"))-> questionnaire
 
 # prep: assign classes
-as.factor(questionnaire$`Participant Public ID`)->questionnaire$`Participant Public ID`
+as.factor(questionnaire$`Participant Private ID`)->questionnaire$`Participant Private ID`
 as.numeric(questionnaire$age)->questionnaire$age
 as.factor(questionnaire$gender)->questionnaire$gender
 as.factor(questionnaire$state_of_residence)->questionnaire$state_of_residence
@@ -42,7 +42,7 @@ as.factor(questionnaire$party)->questionnaire$party
 # identify multiple participation#
 
 questionnaire %>%
-  group_by (`Participant Public ID`)%>%
+  group_by (`Participant Private ID`)%>%
              summarise (n_distinct (`UTC Timestamp`))-> multi_part 
 
 
@@ -52,18 +52,21 @@ questionnaire %>%
 ## check check technical stuff & representative of sample/ demographics
 
 questionnaire%>%
-  select("Participant Public ID", "Participant Status", "Participant OS", "Participant Browser", "Task Name", "counterbalance-nimi", "counterbalance-x3xi", "counterbalance-xq3l", "randomiser-rtb5", "age", "gender", "state_of_residence", "education_school", "education_profession1", "education_profession2", "income", "profession", "profession-text")->pp_bckgr
+  select("Participant Private ID", "Participant Status", "Participant OS", "Participant Browser", "Task Name", "counterbalance-nimi", "counterbalance-x3xi", "counterbalance-xq3l", "randomiser-rtb5", "age", "gender", "state_of_residence", "education_school", "education_profession1", "education_profession2", "income", "profession", "profession-text")->pp_bckgr
 
 ## check specific IVs language & populism
 
 questionnaire%>%
-  select("Participant Public ID", starts_with("languages_caregiver1"), starts_with("languages_caregiver2"), "other_languages", "own_dialect", "party", "party-text", matches("^social_desirability_[A-I]-quantised$"), matches("^populism_[A-D]$"), starts_with("political_"))-> pp_lang_pop
+  select("Participant Private ID", starts_with("languages_caregiver1"), starts_with("languages_caregiver2"), "other_languages", "own_dialect", "party", "party-text", matches("^social_desirability_[A-I]-quantised$"), matches("^populism_[A-D]$"), starts_with("political_"))-> pp_lang_pop
 
 
 
 ## create new dummy variables education
 
 # new variable: education & training
+
+
+ 
 
 pp_bckgr%>%
   mutate (education_profession1_sum = case_when
@@ -76,17 +79,16 @@ pp_bckgr%>%
             education_profession1 == "Keinen" ~ "low",
             education_profession1 == "Meister/in, Technikerabschluss" ~ "middle",
             education_profession1 == "Teilfacharbeiterabschluss" ~ "low",
-            education_profession1 == "abgeschlossene gewerbliche oder landwirtschaftliche Lehre" ~ "middle",
-            education_profession1 == "abgeschlossene kaufmännische Lehre" ~ "middle",
-            education_profession1 == "andere" ~ "middle",
+            education_profession1 == "Abgeschlossene gewerbliche oder landwirtschaftliche Lehre" ~ "middle",
+            education_profession1 == "Abgeschlossene kaufmännische Lehre" ~ "middle",
             education_profession1 == "beruflich-betriebliche Anlernzeit mit Abschlusszeugnis, aber keine Lehre" ~ "low", TRUE ~ NA))-> pp_bckgr
 
 
 pp_bckgr%>%
   mutate (education_school_sum = case_when
           (education_school == "Schule beendet ohne Abschluss"  ~ "low",
-            education_school == "Hauptschulabschluss, Volksschulabschluss, Abschluss der polytechnischen Oberschule 8. oder 9. Klasse" ~ "low",
-            education_school == "Realschulabschluss, Mittlere Reife, Fachschulreife oder Abschluss der polytechnischen Oberschule 10. Klasse" ~ "middle",
+            education_school == "Hauptschulabschluss/ Volksschulabschluss/ Abschluss der polytechnischen Oberschule 8. oder 9. Klasse" ~ "low",
+            education_school == "Realschulabschluss/ Mittlere Reife/ Fachschulreife oder Abschluss der polytechnischen Oberschule 10. Klasse" ~ "middle",
             education_school == "Fachhochschulreife (Abschluss einer Fachoberschule etc.)" ~ "high",
             education_school == "Abitur bzw. erweiterte Oberschule mit Abschluss 12. Klasse (Hochschulreife)" ~ "high",
             education_school == "bin noch Schüler/in" ~ "still at school",
@@ -103,12 +105,16 @@ colnames(pp_bckgr)
 
 pp_bckgr%>%
   group_by(`randomiser-rtb5`,`counterbalance-nimi`, `counterbalance-x3xi`, `counterbalance-xq3l`)%>%
-  summarise(n_distinct(`Participant Public ID`))->random
-
-
+  summarise(n_distinct(`Participant Private ID`))->random
 
 
 ## check: participant background
+
+### federal state
+
+pp_bckgr%>%
+  group_by(state_of_residence)%>%
+  summarise(n_distinct(`Participant Private ID`))->pp_state
 
 ### participant age
 
@@ -121,36 +127,37 @@ pp_bckgr%>%
 
 pp_bckgr%>%
   group_by(gender)%>%
-  summarise(n_distinct(`Participant Public ID`))->pp_gender
+  summarise(n_distinct(`Participant Private ID`))->pp_gender
 
 ### sum_education_school
 pp_bckgr%>%
   ungroup()%>%
   group_by(education_school_sum)%>%
-  summarise(n_distinct(`Participant Public ID`))->sum_education
+  summarise(n_distinct(`Participant Private ID`))->sum_education
 
 ### education
 pp_bckgr%>%
   group_by(education_school)%>%
-  summarise(n_distinct(`Participant Public ID`))->education
+  summarise(n_distinct(`Participant Private ID`))->education
 
 ### sum_profession
 pp_bckgr%>%
   group_by(education_profession1_sum)%>%
-  summarise(n_distinct(`Participant Public ID`))->sum_profession1
+  summarise(n_distinct(`Participant Private ID`))->sum_profession1
 
 
 ### income
 
 pp_bckgr%>%
   group_by(income)%>%
-  summarise(n_distinct(`Participant Public ID`))->income
+  summarise(n_distinct(`Participant Private ID`))->income
 
 ### profession
 
 pp_bckgr%>%
   group_by(profession)%>%
-  summarise(n_distinct(`Participant Public ID`))->sum_profession
+  summarise(n_distinct(`Participant Private ID`))->sum_profession
+
 
 # pp lang. & political bckgr
 
@@ -169,4 +176,4 @@ pp_lang_pop%>%
 colnames(pp_lang_pop)
 
 pp_lang_pop%>%
-  select(`Participant Public ID`, other_languages, own_dialect, lang.variety, everything())->pp_lang_pop
+  select(`Participant Private ID`, other_languages, own_dialect, lang.variety, everything())->pp_lang_pop
