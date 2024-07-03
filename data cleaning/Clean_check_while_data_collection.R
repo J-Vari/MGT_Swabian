@@ -161,7 +161,6 @@ pp_bckgr%>%
 
 # pp lang. & political bckgr
 
-colnames(pp_lang_pop)
 
 pp_lang_pop%>%
   select( -`political_orientation_A-quantised`, -`political_orientation_B-quantised`, -`political_orientation_C-quantised`, -`political_orientation_D-quantised`, -`political_spectrum_other-quantised`)->pp_lang_pop
@@ -177,3 +176,10 @@ colnames(pp_lang_pop)
 
 pp_lang_pop%>%
   select(`Participant Private ID`, other_languages, own_dialect, lang.variety, everything())->pp_lang_pop
+
+# political backgr
+
+pp_lang_pop%>%
+  group_by(party)%>%
+  summarise(n_distinct(`Participant Private ID`))->sum_party
+
