@@ -72,11 +72,25 @@ origin_authen_male%>%
     Target == "Origin & authenticity" & !grepl("^[0-9]+$", Response) ~ "identity_lang.variety",
     TRUE ~ NA_character_))%>%
   filter(Response != "continue")%>%
-  select(-`Response Type`, -Target)-> origin_authen_male
+  select(-`Response Type`, -Target)%>%
+  select(`Participant Public ID`, Response, Target_Concept, Audio, Variety)-> origin_authen_male
 
-  
+# separate Paradigm Check Level
+origin_authen_male %>%
+  group_by(`Participant Public ID`) %>%
+  mutate(
+    Target_Concept = case_when(
+      row_number() == 6 & Target_Concept == "Paradigm check" ~ "Paradigm check 1",
+      row_number() == 7 & Target_Concept == "Paradigm check" ~ "Paradigm check 2",
+      TRUE ~ Target_Concept)) %>%
+  ungroup()-> origin_authen_male
 
+## turn long into wide format to match better
+pivot_wider(origin_authen_male, names_from = "Target_Concept",
+              values_from = "Response", values_fill = NA)->origin_authen_male
 
+# bind audio evaluation with origin & authenticity questions
+left_join(audio_eval_male, origin_authen_male, by= "Participant Public ID")->Test_male 
 
 
 # clean tasks female only
@@ -180,6 +194,8 @@ origin_authen_male_vs_female%>%
 
 
 # bind csv files of task data sets
+
+left_join(audio_eval_male, origin_authen_male, by= "Participant Public ID")-> test_male
 
 
 # bind csv files of task data sets & questionnaire
