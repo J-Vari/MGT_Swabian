@@ -183,6 +183,16 @@ pp_lang_pop%>%
   group_by(party)%>%
   summarise(n_distinct(`Participant Private ID`))->sum_party
 
+# lang. variety
+
+pp_lang_pop%>%
+  group_by(lang.variety)%>%
+summarise(n_distinct(`Participant Private ID`))->sum_lang.variety_caregiver
+
+pp_lang_pop%>%
+  summarise(mean(own_dialect), sd (own_dialect), min (own_dialect), max(own_dialect))->own_lang.variety
+
+
 ## unite two separate data sets for further analyses
 
 full_join(pp_lang_pop, pp_bckgr, by= "Participant Private ID")-> questionnaire_final
