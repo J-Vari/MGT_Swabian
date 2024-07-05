@@ -60,11 +60,22 @@ audio_eval_male%>%
   mutate (Polit_ori = ifelse(Polit_ori == "l", "left", "right"))%>%
   mutate (Lang.Variety_Audio = ifelse(Lang.Variety_Audio == "st", "Standard German", "Regional Variety"))-> audio_eval_male
 
-## clean origin_authen_male
+## clean origin_authen_male & elaborate Origin & authenticity column
 origin_authen_male%>%
   select(`Participant Public ID`, `Response Type`, Response, `Spreadsheet: Display`, `Spreadsheet: Audio`, `Spreadsheet: Variety`)%>%
   rename(Target = `Spreadsheet: Display`, Audio = `Spreadsheet: Audio`, Variety = `Spreadsheet: Variety`)%>%
-  filter (`Response Type` == "response")->origin_authen_male 
+  filter (`Response Type` == "response")%>%
+  mutate(Target_Concept = case_when(
+    Target == "Political level" ~ "Political level",
+    Target == "Paradigm check" ~ "Paradigm check",
+    Target == "Origin & authenticity" & grepl("^[0-9]+$", Response) ~ "proximity_standard.variety",
+    Target == "Origin & authenticity" & !grepl("^[0-9]+$", Response) ~ "identity_lang.variety",
+    TRUE ~ NA_character_))%>%
+  filter(Response != "continue")%>%
+  select(-`Response Type`, -Target)-> origin_authen_male
+
+  
+
 
 
 
@@ -102,11 +113,21 @@ audio_eval_female%>%
   mutate (Polit_ori = ifelse(Polit_ori == "l", "left", "right"))%>%
   mutate (Lang.Variety_Audio = ifelse(Lang.Variety_Audio == "st", "Standard German", "Regional Variety"))-> audio_eval_female
 
-## clean origin_authen_female
+## clean origin_authen_female & elaborate Origin & authenticity column
 origin_authen_female%>%
   select(`Participant Public ID`, `Response Type`, Response, `Spreadsheet: Display`, `Spreadsheet: Audio`, `Spreadsheet: Variety`)%>%
   rename(Target = `Spreadsheet: Display`, Audio = `Spreadsheet: Audio`, Variety = `Spreadsheet: Variety`)%>%
-  filter (`Response Type` == "response")->origin_authen_female
+  filter (`Response Type` == "response")%>%
+  mutate(Target_Concept = case_when(
+    Target == "Political level" ~ "Political level",
+    Target == "Paradigm check" ~ "Paradigm check",
+    Target == "Origin & authenticity" & grepl("^[0-9]+$", Response) ~ "proximity_standard.variety",
+    Target == "Origin & authenticity" & !grepl("^[0-9]+$", Response) ~ "identity_lang.variety",
+    TRUE ~ NA_character_))%>%
+  filter(Response != "continue")%>%
+  select(-`Response Type`, -Target)-> origin_authen_female
+
+
 
 
 # *clean tasks male vs. female*
@@ -143,16 +164,25 @@ audio_eval_male_vs_female%>%
   mutate (Polit_ori = ifelse(Polit_ori == "l", "left", "right"))%>%
   mutate (Lang.Variety_Audio = ifelse(Lang.Variety_Audio == "st", "Standard German", "Regional Variety"))-> audio_eval_male_vs_female
 
-## clean origin_authen_male_vs_female
+## clean origin_authen_male_vs_female & elaborate Origin & authenticity column
 origin_authen_male_vs_female%>%
   select(`Participant Public ID`, `Response Type`, Response, `Spreadsheet: Display`, `Spreadsheet: Audio`, `Spreadsheet: Variety`)%>%
   rename(Target = `Spreadsheet: Display`, Audio = `Spreadsheet: Audio`, Variety = `Spreadsheet: Variety`)%>%
-  filter (`Response Type` == "response")->origin_authen_male_vs_female
+  filter (`Response Type` == "response")%>%
+  mutate(Target_Concept = case_when(
+    Target == "Political level" ~ "Political level",
+    Target == "Paradigm check" ~ "Paradigm check",
+    Target == "Origin & authenticity" & grepl("^[0-9]+$", Response) ~ "proximity_standard.variety",
+    Target == "Origin & authenticity" & !grepl("^[0-9]+$", Response) ~ "identity_lang.variety",
+    TRUE ~ NA_character_))%>%
+  filter(Response != "continue")%>%
+  select(-`Response Type`, -Target)-> origin_authen_male_vs_female
 
 
+# bind csv files of task data sets
 
-# unite task data sets with questionnaire
 
+# bind csv files of task data sets & questionnaire
 
 # full_join(audio_eval_male, audio_eval_female, audio_eval_male_vs_female, questionnaire, by= "Participant Private ID")-> questionnaire_final
 
