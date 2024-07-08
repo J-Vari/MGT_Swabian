@@ -195,6 +195,6 @@ pp_lang_pop%>%
 
 ## unite two separate data sets for further analyses
 
-full_join(pp_lang_pop, pp_bckgr, by= "Participant Private ID")-> questionnaire_final
+#full_join(pp_lang_pop, pp_bckgr, by= "Participant Private ID")-> questionnaire_final
 
-write_delim(questionnaire_final, here("data_processed", "questionnaires.csv"), col_names = TRUE, delim = ",")
+#write_delim(questionnaire_final, here("data_processed", "questionnaires.csv"), col_names = TRUE, delim = ",")

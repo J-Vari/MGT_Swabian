@@ -38,11 +38,11 @@ audio_eval_male%>%
   filter(`Response Type` == "response")%>%
  filter (str_starts(Speaker, "Exp"))->audio_eval_male
 
-# remove markdown from values
+## remove markdown from values
 audio_eval_male%>%
 mutate(across(starts_with("Spreadsheet:"), ~ str_remove_all(., "\\*\\*")))-> audio_eval_male
 
-# create one column with attribute related to rating
+## create one column with attribute related to rating
 audio_eval_male%>%
 mutate(Attribute = case_when(
   `Object Name` == "RatingScale_Stimulus1" ~ `Spreadsheet: Stimulus1`,
@@ -53,7 +53,7 @@ mutate(Attribute = case_when(
   `Object Name` == "RatingScale_Stimulus6" ~ `Spreadsheet: Stimulus6`,
   `Object Name` == "RatingScale_AttentionCheck" ~ `Spreadsheet: Attention Check`))->audio_eval_male
 
-# delete unnecessary columns & elaborate levels of categorical variables
+## delete unnecessary columns & elaborate levels of categorical variables
 audio_eval_male%>%
   select(-starts_with("Spreadsheet:"), -`Response Type`)%>%
   mutate(Speaker_Gender = ifelse(Speaker_Gender=="f", "female", "male"))%>%
@@ -75,7 +75,7 @@ origin_authen_male%>%
   select(-`Response Type`, -Target)%>%
   select(`Participant Public ID`, Response, Target_Concept, Audio, Variety)-> origin_authen_male
 
-# separate Paradigm Check Level
+## separate Paradigm Check Level
 origin_authen_male %>%
   group_by(`Participant Public ID`) %>%
   mutate(
@@ -85,12 +85,13 @@ origin_authen_male %>%
       TRUE ~ Target_Concept)) %>%
   ungroup()-> origin_authen_male
 
-## turn long into wide format to match better
+## turn long into wide format to match 3 different data sets
 pivot_wider(origin_authen_male, names_from = "Target_Concept",
               values_from = "Response", values_fill = NA)->origin_authen_male
 
+## Combine 3 data sets: questionnaire, audio eval, origin & authenticity
 # bind audio evaluation with origin & authenticity questions
-left_join(audio_eval_male, origin_authen_male, by= "Participant Public ID")->Test_male 
+# left_join(audio_eval_male, origin_authen_male, by= "Participant Public ID")->Test_male # doesn't work
 
 
 # clean tasks female only
