@@ -32,7 +32,7 @@ origin_authen_male_vs_female <-read_delim(here("raw_data", "data_exp_86579-v59_t
 audio_eval_male%>%
   select(`Participant Public ID`, `Response Type`, `Response`, `Object Name`, `Spreadsheet: Audio`, `Spreadsheet: Speaker`, `Spreadsheet: Speaker gender`, `Spreadsheet: Variety`,
          `Spreadsheet: Political orientation`, `Spreadsheet: Stimulus number`, `Spreadsheet: Stimulus1`, `Spreadsheet: Stimulus2`, `Spreadsheet: Stimulus3`, `Spreadsheet: Stimulus4`, `Spreadsheet: Stimulus5`, 
-         `Spreadsheet: Stimulus6`, `Store: Attention Check`)%>%
+         `Spreadsheet: Stimulus6`, `Spreadsheet: Attention Check`, `Store: Attention Check`)%>%
   rename(Audio_Track = `Spreadsheet: Audio`, Speaker = `Spreadsheet: Speaker`, Speaker_Gender = `Spreadsheet: Speaker gender`, Lang.Variety_Audio = `Spreadsheet: Variety`,
          Polit_ori = `Spreadsheet: Political orientation`, Statement_no = `Spreadsheet: Stimulus number`, Att.check_acc = `Store: Attention Check`)%>%
   filter(`Response Type` == "response")%>%
@@ -62,7 +62,7 @@ audio_eval_male%>%
 
 ## clean origin_authen_male & elaborate Origin & authenticity column
 origin_authen_male%>%
-  select(`Participant Public ID`, `Response Type`, Response, `Spreadsheet: Display`, `Spreadsheet: Audio`, `Spreadsheet: Variety`)%>%
+  select(`Participant Public ID`, `Response Type`, Response, `Spreadsheet: Display`, `Spreadsheet: Audio`, `Spreadsheet: Variety`, `Object ID`)%>%
   rename(Target = `Spreadsheet: Display`, Audio = `Spreadsheet: Audio`, Variety = `Spreadsheet: Variety`)%>%
   filter (`Response Type` == "response")%>%
   mutate(Target_Concept = case_when(
@@ -73,17 +73,16 @@ origin_authen_male%>%
     TRUE ~ NA_character_))%>%
   filter(Response != "continue")%>%
   select(-`Response Type`, -Target)%>%
-  select(`Participant Public ID`, Response, Target_Concept, Audio, Variety)-> origin_authen_male
+  select(`Participant Public ID`, Response, Target_Concept, Audio, Variety, `Object ID`)-> origin_authen_male
 
 ## separate Paradigm Check Level
 origin_authen_male %>%
-  group_by(`Participant Public ID`) %>%
   mutate(
     Target_Concept = case_when(
-      row_number() == 6 & Target_Concept == "Paradigm check" ~ "Paradigm check 1",
-      row_number() == 7 & Target_Concept == "Paradigm check" ~ "Paradigm check 2",
+      `Object ID` == "object-1145" ~ "Paradigm check 1",
+      `Object ID` == "object-1146" ~ "Paradigm check 2",
       TRUE ~ Target_Concept)) %>%
-  ungroup()-> origin_authen_male
+  select(-`Object ID`) -> origin_authen_male
 
 ## turn long into wide format to match 3 different data sets
 pivot_wider(origin_authen_male, names_from = "Target_Concept",
@@ -100,7 +99,7 @@ pivot_wider(origin_authen_male, names_from = "Target_Concept",
 audio_eval_female%>%
   select(`Participant Public ID`, `Response Type`, `Response`, `Object Name`, `Spreadsheet: Audio`, `Spreadsheet: Speaker`, `Spreadsheet: Speaker gender`, `Spreadsheet: Variety`,
          `Spreadsheet: Political orientation`, `Spreadsheet: Stimulus number`, `Spreadsheet: Stimulus1`, `Spreadsheet: Stimulus2`, `Spreadsheet: Stimulus3`, `Spreadsheet: Stimulus4`, `Spreadsheet: Stimulus5`, 
-         `Spreadsheet: Stimulus6`, `Store: Attention Check`)%>%
+         `Spreadsheet: Stimulus6`, `Spreadsheet: Attention Check`, `Store: Attention Check`)%>%
   rename(Audio_Track = `Spreadsheet: Audio`, Speaker = `Spreadsheet: Speaker`, Speaker_Gender = `Spreadsheet: Speaker gender`, Lang.Variety_Audio = `Spreadsheet: Variety`,
          Polit_ori = `Spreadsheet: Political orientation`, Statement_no = `Spreadsheet: Stimulus number`, Att.check_acc = `Store: Attention Check`)%>%
   filter(`Response Type` == "response")%>%
@@ -130,7 +129,7 @@ audio_eval_female%>%
 
 ## clean origin_authen_female & elaborate Origin & authenticity column
 origin_authen_female%>%
-  select(`Participant Public ID`, `Response Type`, Response, `Spreadsheet: Display`, `Spreadsheet: Audio`, `Spreadsheet: Variety`)%>%
+  select(`Participant Public ID`, `Response Type`, Response, `Spreadsheet: Display`, `Spreadsheet: Audio`, `Spreadsheet: Variety`, `Object ID`)%>%
   rename(Target = `Spreadsheet: Display`, Audio = `Spreadsheet: Audio`, Variety = `Spreadsheet: Variety`)%>%
   filter (`Response Type` == "response")%>%
   mutate(Target_Concept = case_when(
@@ -140,9 +139,21 @@ origin_authen_female%>%
     Target == "Origin & authenticity" & !grepl("^[0-9]+$", Response) ~ "identity_lang.variety",
     TRUE ~ NA_character_))%>%
   filter(Response != "continue")%>%
-  select(-`Response Type`, -Target)-> origin_authen_female
+  select(-`Response Type`, -Target) %>%
+  select(`Participant Public ID`, Response, Target_Concept, Audio, Variety, `Object ID`) -> origin_authen_female
 
+## separate Paradigm Check Level
+origin_authen_female %>%
+  mutate(
+    Target_Concept = case_when(
+      `Object ID` == "object-1145" ~ "Paradigm check 1",
+      `Object ID` == "object-1146" ~ "Paradigm check 2",
+      TRUE ~ Target_Concept)) %>%
+  select(-`Object ID`) -> origin_authen_female
 
+## turn long into wide format to match 3 different data sets
+pivot_wider(origin_authen_female, names_from = "Target_Concept",
+            values_from = "Response", values_fill = NA)->origin_authen_female
 
 
 # *clean tasks male vs. female*
@@ -151,7 +162,7 @@ origin_authen_female%>%
 audio_eval_male_vs_female%>%
   select(`Participant Public ID`, `Response Type`, `Response`, `Object Name`, `Spreadsheet: Audio`, `Spreadsheet: Speaker`, `Spreadsheet: Speaker gender`, `Spreadsheet: Variety`,
          `Spreadsheet: Political orientation`, `Spreadsheet: Stimulus number`, `Spreadsheet: Stimulus1`, `Spreadsheet: Stimulus2`, `Spreadsheet: Stimulus3`, `Spreadsheet: Stimulus4`, `Spreadsheet: Stimulus5`, 
-         `Spreadsheet: Stimulus6`, `Store: Attention Check`)%>%
+         `Spreadsheet: Stimulus6`, `Spreadsheet: Attention Check`, `Store: Attention Check`)%>%
   rename(Audio_Track = `Spreadsheet: Audio`, Speaker = `Spreadsheet: Speaker`, Speaker_Gender = `Spreadsheet: Speaker gender`, Lang.Variety_Audio = `Spreadsheet: Variety`,
          Polit_ori = `Spreadsheet: Political orientation`, Statement_no = `Spreadsheet: Stimulus number`, Att.check_acc = `Store: Attention Check`)%>%
   filter(`Response Type` == "response")%>%
@@ -181,7 +192,7 @@ audio_eval_male_vs_female%>%
 
 ## clean origin_authen_male_vs_female & elaborate Origin & authenticity column
 origin_authen_male_vs_female%>%
-  select(`Participant Public ID`, `Response Type`, Response, `Spreadsheet: Display`, `Spreadsheet: Audio`, `Spreadsheet: Variety`)%>%
+  select(`Participant Public ID`, `Response Type`, Response, `Spreadsheet: Display`, `Spreadsheet: Audio`, `Spreadsheet: Variety`, `Object ID`)%>%
   rename(Target = `Spreadsheet: Display`, Audio = `Spreadsheet: Audio`, Variety = `Spreadsheet: Variety`)%>%
   filter (`Response Type` == "response")%>%
   mutate(Target_Concept = case_when(
@@ -191,7 +202,22 @@ origin_authen_male_vs_female%>%
     Target == "Origin & authenticity" & !grepl("^[0-9]+$", Response) ~ "identity_lang.variety",
     TRUE ~ NA_character_))%>%
   filter(Response != "continue")%>%
-  select(-`Response Type`, -Target)-> origin_authen_male_vs_female
+  select(-`Response Type`, -Target) %>%
+  select(`Participant Public ID`, Response, Target_Concept, Audio, Variety, `Object ID`)-> origin_authen_male_vs_female
+
+## separate Paradigm Check Level
+origin_authen_male_vs_female %>%
+  mutate(
+    Target_Concept = case_when(
+      `Object ID` == "object-1145" ~ "Paradigm check 1",
+      `Object ID` == "object-1146" ~ "Paradigm check 2",
+      TRUE ~ Target_Concept)) %>%
+  select(-`Object ID`) -> origin_authen_male_vs_female
+
+## turn long into wide format to match 3 different data sets
+pivot_wider(origin_authen_male_vs_female, names_from = "Target_Concept",
+            values_from = "Response", values_fill = NA)->origin_authen_male_vs_female
+
 
 
 # bind csv files of task data sets
