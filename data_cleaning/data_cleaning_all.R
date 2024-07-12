@@ -75,6 +75,7 @@ origin_authen_male%>%
   select(-`Response Type`, -Target)%>%
   select(`Participant Public ID`, Response, Target_Concept, Audio, Variety, `Object ID`)-> origin_authen_male
 
+
 ## separate Paradigm Check Level
 origin_authen_male %>%
   mutate(
@@ -221,8 +222,17 @@ pivot_wider(origin_authen_male_vs_female, names_from = "Target_Concept",
 
 
 # bind csv files of task data sets
+audio_eval_male %>%
+left_join(origin_authen_male, by= "Participant Public ID", relationship = "many-to-many") %>%
+left_join(questionnaire, by= "Participant Public ID", relationship = "many-to-many") -> test_male
 
-left_join(audio_eval_male, origin_authen_male, by= "Participant Public ID")-> test_male
+audio_eval_female %>%
+  left_join(origin_authen_male, by= "Participant Public ID", relationship = "many-to-many") %>%
+  left_join(questionnaire, by= "Participant Public ID", relationship = "many-to-many") -> test_female
+
+audio_eval_male_vs_female %>%
+  left_join(origin_authen_male, by= "Participant Public ID", relationship = "many-to-many") %>%
+  left_join(questionnaire, by= "Participant Public ID", relationship = "many-to-many") -> test_male_vs_female
 
 
 # bind csv files of task data sets & questionnaire
