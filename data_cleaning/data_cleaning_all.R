@@ -13,7 +13,7 @@ options(scipen=999)
 
 # read questionnaire data
 
-questionnaire <- read_delim(here("data_processed", "questionnaire_final.csv"), col_names = TRUE, delim = ",")
+questionnaire <- read_delim(here("data_processed", "questionnaires.csv"), col_names = TRUE, delim = ",")
 as_tibble(questionnaire)
 questionnaire
 
@@ -32,9 +32,9 @@ origin_authen_male_vs_female <-read_delim(here("raw_data", "data_exp_86579-v59_t
 audio_eval_male%>%
   select(`Participant Public ID`, `Response Type`, `Response`, `Object Name`, `Spreadsheet: Audio`, `Spreadsheet: Speaker`, `Spreadsheet: Speaker gender`, `Spreadsheet: Variety`,
          `Spreadsheet: Political orientation`, `Spreadsheet: Stimulus number`, `Spreadsheet: Stimulus1`, `Spreadsheet: Stimulus2`, `Spreadsheet: Stimulus3`, `Spreadsheet: Stimulus4`, `Spreadsheet: Stimulus5`, 
-         `Spreadsheet: Stimulus6`, `Spreadsheet: Attention Check`)%>%
+         `Spreadsheet: Stimulus6`, `Store: Attention Check`)%>%
   rename(Audio_Track = `Spreadsheet: Audio`, Speaker = `Spreadsheet: Speaker`, Speaker_Gender = `Spreadsheet: Speaker gender`, Lang.Variety_Audio = `Spreadsheet: Variety`,
-         Polit_ori = `Spreadsheet: Political orientation`, Statement_no = `Spreadsheet: Stimulus number`)%>%
+         Polit_ori = `Spreadsheet: Political orientation`, Statement_no = `Spreadsheet: Stimulus number`, Att.check_acc = `Store: Attention Check`)%>%
   filter(`Response Type` == "response")%>%
  filter (str_starts(Speaker, "Exp"))->audio_eval_male
 
@@ -100,9 +100,9 @@ pivot_wider(origin_authen_male, names_from = "Target_Concept",
 audio_eval_female%>%
   select(`Participant Public ID`, `Response Type`, `Response`, `Object Name`, `Spreadsheet: Audio`, `Spreadsheet: Speaker`, `Spreadsheet: Speaker gender`, `Spreadsheet: Variety`,
          `Spreadsheet: Political orientation`, `Spreadsheet: Stimulus number`, `Spreadsheet: Stimulus1`, `Spreadsheet: Stimulus2`, `Spreadsheet: Stimulus3`, `Spreadsheet: Stimulus4`, `Spreadsheet: Stimulus5`, 
-         `Spreadsheet: Stimulus6`, `Spreadsheet: Attention Check`)%>%
+         `Spreadsheet: Stimulus6`, `Store: Attention Check`)%>%
   rename(Audio_Track = `Spreadsheet: Audio`, Speaker = `Spreadsheet: Speaker`, Speaker_Gender = `Spreadsheet: Speaker gender`, Lang.Variety_Audio = `Spreadsheet: Variety`,
-         Polit_ori = `Spreadsheet: Political orientation`, Statement_no = `Spreadsheet: Stimulus number`)%>%
+         Polit_ori = `Spreadsheet: Political orientation`, Statement_no = `Spreadsheet: Stimulus number`, Att.check_acc = `Store: Attention Check`)%>%
   filter(`Response Type` == "response")%>%
   filter (str_starts(Speaker, "Exp"))->audio_eval_female
 
@@ -151,9 +151,9 @@ origin_authen_female%>%
 audio_eval_male_vs_female%>%
   select(`Participant Public ID`, `Response Type`, `Response`, `Object Name`, `Spreadsheet: Audio`, `Spreadsheet: Speaker`, `Spreadsheet: Speaker gender`, `Spreadsheet: Variety`,
          `Spreadsheet: Political orientation`, `Spreadsheet: Stimulus number`, `Spreadsheet: Stimulus1`, `Spreadsheet: Stimulus2`, `Spreadsheet: Stimulus3`, `Spreadsheet: Stimulus4`, `Spreadsheet: Stimulus5`, 
-         `Spreadsheet: Stimulus6`, `Spreadsheet: Attention Check`)%>%
+         `Spreadsheet: Stimulus6`, `Store: Attention Check`)%>%
   rename(Audio_Track = `Spreadsheet: Audio`, Speaker = `Spreadsheet: Speaker`, Speaker_Gender = `Spreadsheet: Speaker gender`, Lang.Variety_Audio = `Spreadsheet: Variety`,
-         Polit_ori = `Spreadsheet: Political orientation`, Statement_no = `Spreadsheet: Stimulus number`)%>%
+         Polit_ori = `Spreadsheet: Political orientation`, Statement_no = `Spreadsheet: Stimulus number`, Att.check_acc = `Store: Attention Check`)%>%
   filter(`Response Type` == "response")%>%
   filter (str_starts(Speaker, "Exp"))->audio_eval_male_vs_female
 
