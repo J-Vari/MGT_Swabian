@@ -61,19 +61,24 @@ audio_eval_male%>%
   mutate (Lang.Variety_Audio = ifelse(Lang.Variety_Audio == "st", "Standard German", "Regional Variety"))-> audio_eval_male
 
 ## clean origin_authen_male & elaborate Origin & authenticity column
+
+origin_authen_male <-read_delim(here("raw_data", "data_exp_86579-v59_task-brwb.csv"), col_names = TRUE, delim = ",")
+
 origin_authen_male%>%
-  select(`Participant Public ID`, `Response Type`, Response, `Spreadsheet: Display`, `Spreadsheet: Audio`, `Spreadsheet: Variety`, `Object ID`)%>%
+  select(`Participant Public ID`, `Response Type`, Response, `Spreadsheet: Display`, `Spreadsheet: Audio`, `Spreadsheet: Variety`, `Object ID`, `UTC Date and Time`, `UTC Timestamp`)%>%
   rename(Target = `Spreadsheet: Display`, Audio = `Spreadsheet: Audio`, Variety = `Spreadsheet: Variety`)%>%
   filter (`Response Type` == "response")%>%
   mutate(Target_Concept = case_when(
     Target == "Political level" ~ "Political level",
     Target == "Paradigm check" ~ "Paradigm check",
-    Target == "Origin & authenticity" & grepl("^[0-9]+$", Response) ~ "proximity_standard.variety",
-    Target == "Origin & authenticity" & !grepl("^[0-9]+$", Response) ~ "identity_lang.variety",
+    Target == "Origin & authenticity" & grepl("^[0-9]+$", Response) & Variety == "non-st" ~ "proximity_variety_non-st",
+    Target == "Origin & authenticity" & grepl("^[0-9]+$", Response) & Variety == "st" ~ "proximity_variety_st",
+    Target == "Origin & authenticity" & !grepl("^[0-9]+$", Response) & Variety == "st" ~ "identity_lang.variety_st",
+    Target == "Origin & authenticity" & !grepl("^[0-9]+$", Response) & Variety == "non-st" ~ "identity_lang.variety_non-st",
     TRUE ~ NA_character_))%>%
   filter(Response != "continue")%>%
   select(-`Response Type`, -Target)%>%
-  select(`Participant Public ID`, Response, Target_Concept, Audio, Variety, `Object ID`)-> origin_authen_male
+  select(`Participant Public ID`, Response, Target_Concept, Audio, Variety, `Object ID`, `UTC Date and Time`, `UTC Timestamp`)-> origin_authen_male
 
 
 ## separate Paradigm Check Level
@@ -82,17 +87,84 @@ origin_authen_male %>%
     Target_Concept = case_when(
       `Object ID` == "object-1145" ~ "Paradigm check 1",
       `Object ID` == "object-1146" ~ "Paradigm check 2",
-      TRUE ~ Target_Concept)) %>%
-  select(-`Object ID`) -> origin_authen_male
+      TRUE ~ Target_Concept)) -> origin_authen_male
+
+## check unique identification of each response
+
+origin_authen_male%>%
+  group_by(`Participant Public ID`, Audio,
+                  Variety, Target_Concept) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  filter(n > 1L)-> duplicates # 4 pp duplicated
+
+## Check reasons for duplicates
+
+origin_authen_male%>%
+  filter (`Participant Public ID` == "281162358237373" | `Participant Public ID` == "281082304369845" | `Participant Public ID` == "281251938576386")-> check_pp
+## => double ratings/ duplicated coz pp changed their rating at a later time OR pp selected "__other" and added answer to open Q field
+
+
+## Solution: create 2 new columns
+### 1) select later response of pp depending on Time Stamp
+
+origin_authen_male %>%
+  group_by(`Participant Public ID`, Audio, Target_Concept) %>%
+  mutate(Response_corrected = Response[which.max(`UTC Timestamp`)])->origin_authen_male
+
+## 2) if "_other" selected, next line text box entry into new column, then drop duplicated "_other"
+
+origin_authen_male%>%
+  mutate(Response_Text_identity_lang.var = ifelse(Response == "__other", lead(Response), NA))%>%
+  ungroup()%>%
+  filter(!(Response_corrected == "__other" & is.na(Response_Text_identity_lang.var)))%>%
+  distinct(`Participant Public ID`, Audio, Target_Concept, Variety, .keep_all = TRUE)%>%
+  select(-Response, -`Object ID`,-`UTC Date and Time`, -`UTC Timestamp`)->origin_authen_male
+
+
+## check duplicates now
+origin_authen_male%>%
+  group_by(`Participant Public ID`, Audio,
+           Variety, Target_Concept) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  filter(n > 1L)-> duplicates
+
 
 ## turn long into wide format to match 3 different data sets
-pivot_wider(origin_authen_male, names_from = "Target_Concept",
-              values_from = "Response", values_fill = NA)->origin_authen_male
+pivot_wider(origin_authen_male , names_from = "Target_Concept",
+              values_from = "Response_corrected")->origin_authen_male
+
+## fill NAs with repeated values in new columns
+
+# Explicitly define the new columns to be filled
+new_columns_to_fill <- c("Response_Text_identity_lang.var", "Political level",
+                         "identity_lang.variety_non-st", "identity_lang.variety_st",
+                         "Paradigm check 1", "Paradigm check 2")
+
+# Fill missing values in the specified columns within each participant
+ origin_authen_male %>%
+  group_by(`Participant Public ID`) %>%
+  fill(all_of(new_columns_to_fill), .direction = "downup") %>%
+  ungroup()-> origin_authen_male
+
+# duplicates & data loss in audio_eval_male?
+ 
+ audio_eval_male%>%
+   group_by(`Participant Public ID`)%>%
+   count()-> pp_rows # 3 pp not normal row no of 168
+ 
+ audio_eval_male%>%
+   filter (`Participant Public ID` == "281093394820202" | `Participant Public ID` == "281348585989177" | `Participant Public ID` =="281427437681691")-> pp_audio_check
 
 ## Combine 3 data sets: questionnaire, audio eval, origin & authenticity
 # bind audio evaluation with origin & authenticity questions
 # left_join(audio_eval_male, origin_authen_male, by= "Participant Public ID")->Test_male # doesn't work
 
+ # Perform the join
+audio_eval_male %>%
+   left_join(origin_authen_male, 
+             by = c("Participant Public ID" = "Participant Public ID", 
+                    "Audio_Track" = "Audio"))-> combined_data
+ 
 
 # clean tasks female only
 ## Audio eval female
