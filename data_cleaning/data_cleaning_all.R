@@ -55,6 +55,15 @@ audio_eval_male%>%
   mutate (Polit_ori = ifelse(Polit_ori == "l", "left", "right"))%>%
   mutate (Lang.Variety_Audio = ifelse(Lang.Variety_Audio == "st", "Standard German", "Regional Variety"))-> audio_eval_male
 
+## select final response attention check accuracy
+audio_eval_male %>%
+  group_by(`Participant Public ID`) %>%
+      mutate(Att.check_acc_last = last(Att.check_acc)) -> audio_eval_male
+
+audio_eval_male %>%
+  select(-Att.check_acc) %>%
+  rename(Att.check_acc = Att.check_acc_last) -> audio_eval_male
+
 ## clean origin_authen_male & elaborate Origin & authenticity column
 
 origin_authen_male <-read_delim(here("raw_data", "data_exp_86579-v59_task-brwb.csv"), col_names = TRUE, delim = ",")
@@ -195,6 +204,15 @@ audio_eval_female%>%
   mutate (Polit_ori = ifelse(Polit_ori == "l", "left", "right"))%>%
   mutate (Lang.Variety_Audio = ifelse(Lang.Variety_Audio == "st", "Standard German", "Regional Variety"))-> audio_eval_female
 
+## select final response attention check accuracy
+audio_eval_female %>%
+  group_by(`Participant Public ID`) %>%
+  mutate(Att.check_acc_last = last(Att.check_acc)) -> audio_eval_female
+
+audio_eval_female %>%
+  select(-Att.check_acc) %>%
+  rename(Att.check_acc = Att.check_acc_last) -> audio_eval_female
+
 ## clean origin_authen_female & elaborate Origin & authenticity column
 origin_authen_female%>%
   select(`Participant Public ID`, `Response Type`, Response, `Spreadsheet: Display`, `Spreadsheet: Audio`, `Spreadsheet: Variety`, `Object ID`)%>%
@@ -257,6 +275,15 @@ audio_eval_male_vs_female%>%
   mutate(Speaker_Gender = ifelse(Speaker_Gender=="FALSE", "female", "male"))%>%
   mutate (Polit_ori = ifelse(Polit_ori == "l", "left", "right"))%>%
   mutate (Lang.Variety_Audio = ifelse(Lang.Variety_Audio == "st", "Standard German", "Regional Variety"))-> audio_eval_male_vs_female
+
+## select final response attention check accuracy
+audio_eval_male_vs_female %>%
+  group_by(`Participant Public ID`) %>%
+  mutate(Att.check_acc_last = last(Att.check_acc)) -> audio_eval_male_vs_female
+
+audio_eval_male_vs_female %>%
+  select(-Att.check_acc) %>%
+  rename(Att.check_acc = Att.check_acc_last) -> audio_eval_male_vs_female
 
 ## clean origin_authen_male_vs_female & elaborate Origin & authenticity column
 origin_authen_male_vs_female%>%
