@@ -271,8 +271,8 @@ audio_eval_male_vs_female%>%
 
 ## delete unnecessary columns & elaborate levels of categorical variables
 audio_eval_male_vs_female%>%
-  select(-starts_with("Spreadsheet:"), -`Response Type`)%>%
-  mutate(Speaker_Gender = ifelse(Speaker_Gender=="FALSE", "female", "male"))%>%
+  select(-starts_with("Spreadsheet:"), -`Response Type`) %>%
+  mutate(Speaker_Gender = ifelse(Speaker_Gender=="f", "female", "male"))%>%
   mutate (Polit_ori = ifelse(Polit_ori == "l", "left", "right"))%>%
   mutate (Lang.Variety_Audio = ifelse(Lang.Variety_Audio == "st", "Standard German", "Regional Variety"))-> audio_eval_male_vs_female
 
