@@ -9,6 +9,7 @@ library(car)
 library(readr)
 library(here)
 library(stringr)
+library(tidytext)
 options(scipen=999)
 
 # Task data
@@ -83,6 +84,20 @@ origin_authen_male %>%
       `Object ID` == "object-1145" ~ "Paradigm check 1",
       `Object ID` == "object-1146" ~ "Paradigm check 2",
       TRUE ~ Target_Concept)) -> origin_authen_male
+
+
+##################################
+#preprocess answers to open text fields
+origin_authen_male %>%
+  mutate(Response_tidy = str_to_lower(Response)) -> origin_authen_male
+
+## Create new variable (1 = deceived by the MGT, 0 = not deceived)
+origin_authen_male %>%
+  mutate(deceived = ifelse(str_detect(Response_tidy, "(gleich|selb).{0,2} (stimm|person|sprecher|sprechende).*") |
+           str_detect(Response_tidy, "(stimm).{0,2} (verstell).*"), 0, 1)) -> origin_authen_male
+
+###################################
+
 
 ## check unique identification of each response
 
