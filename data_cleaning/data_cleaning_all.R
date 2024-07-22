@@ -86,18 +86,22 @@ origin_authen_male %>%
       TRUE ~ Target_Concept)) -> origin_authen_male
 
 
-##################################
-#preprocess answers to open text fields
+# Identify those participants that were not deceived by the speaker illusion
+## Preprocess answers to open text fields
 origin_authen_male %>%
   mutate(Response_tidy = str_to_lower(Response)) -> origin_authen_male
 
-## Create new variable (1 = deceived by the MGT, 0 = not deceived)
+## Create new variable (1 = deceived, 0 = not deceived)
 origin_authen_male %>%
-  mutate(deceived = ifelse(str_detect(Response_tidy, "(gleich|selb).{0,2} (stimm|person|sprecher|sprechende).*") |
+  mutate(deceived = ifelse(str_detect(Response_tidy, "(gleich|selb).{0,2} (person|sprecher|sprechende).*") |
            str_detect(Response_tidy, "(stimm).{0,2} (verstell).*"), 0, 1)) -> origin_authen_male
 
-###################################
-
+origin_authen_male %>%
+  group_by(`Participant Public ID`) %>%
+  mutate(deceived = case_when(
+    any(deceived == 0) ~ 0,
+    TRUE ~ deceived)) %>%
+  ungroup() -> origin_authen_male
 
 ## check unique identification of each response
 
@@ -234,6 +238,23 @@ origin_authen_female %>%
       TRUE ~ Target_Concept)) %>%
   select(-`Object ID`) -> origin_authen_female
 
+# Identify those participants that were not deceived by the speaker illusion
+## Preprocess answers to open text fields
+origin_authen_female %>%
+  mutate(Response_tidy = str_to_lower(Response)) -> origin_authen_female
+
+## Create new variable (1 = deceived, 0 = not deceived)
+origin_authen_female %>%
+  mutate(deceived = ifelse(str_detect(Response_tidy, "(gleich|selb).{0,2} (person|sprecher|sprechende).*") |
+                             str_detect(Response_tidy, "(stimm).{0,2} (verstell).*"), 0, 1)) -> origin_authen_female
+
+origin_authen_female %>%
+  group_by(`Participant Public ID`) %>%
+  mutate(deceived = case_when(
+    any(deceived == 0) ~ 0,
+    TRUE ~ deceived)) %>%
+  ungroup() -> origin_authen_female
+
 ## turn long into wide format to match 3 different data sets
 pivot_wider(origin_authen_female, names_from = "Target_Concept",
             values_from = "Response", values_fill = NA)->origin_authen_female
@@ -296,6 +317,23 @@ origin_authen_male_vs_female %>%
       `Object ID` == "object-1146" ~ "Paradigm check 2",
       TRUE ~ Target_Concept)) %>%
   select(-`Object ID`) -> origin_authen_male_vs_female
+
+# Identify those participants that were not deceived by the speaker illusion
+## Preprocess answers to open text fields
+origin_authen_male_vs_female %>%
+  mutate(Response_tidy = str_to_lower(Response)) -> origin_authen_male_vs_female
+
+## Create new variable (1 = deceived, 0 = not deceived)
+origin_authen_male_vs_female %>%
+  mutate(deceived = ifelse(str_detect(Response_tidy, "(gleich|selb).{0,2} (person|sprecher|sprechende).*") |
+                             str_detect(Response_tidy, "(stimm).{0,2} (verstell).*"), 0, 1)) -> origin_authen_male_vs_female
+
+origin_authen_male_vs_female %>%
+  group_by(`Participant Public ID`) %>%
+  mutate(deceived = case_when(
+    any(deceived == 0) ~ 0,
+    TRUE ~ deceived)) %>%
+  ungroup() -> origin_authen_male_vs_female
 
 ## turn long into wide format to match 3 different data sets
 pivot_wider(origin_authen_male_vs_female, names_from = "Target_Concept",
