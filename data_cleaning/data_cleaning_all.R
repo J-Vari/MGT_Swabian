@@ -495,14 +495,15 @@ pp_lang_pop%>%
   select( -`political_orientation_A-quantised`, -`political_orientation_B-quantised`, -`political_orientation_C-quantised`, -`political_orientation_D-quantised`, -`political_spectrum_other-quantised`)->pp_lang_pop
 
 pp_lang_pop%>%
-  pivot_longer(cols = 2:23, names_to = "variety_numeric", values_to = "lang.variety")->pp_lang_pop
+  pivot_longer(starts_with("languages_caregiver1"), names_to = "variety_numeric1", values_to = "lang.variety1") %>%
+  pivot_longer(starts_with("languages_caregiver2"), names_to = "variety_numeric2", values_to = "lang.variety2")->pp_lang_pop
 
 pp_lang_pop%>%
-  drop_na(lang.variety)%>%
-  select (-`variety_numeric`)->pp_lang_pop
+  drop_na(lang.variety1, lang.variety2)%>%
+  select (-`variety_numeric1`, -`variety_numeric2`)->pp_lang_pop
 
 pp_lang_pop%>%
-  select(`Participant Private ID`, other_languages, own_dialect, lang.variety, everything())->pp_lang_pop
+  select(`Participant Private ID`, other_languages, own_dialect, lang.variety1, lang.variety2, everything())->pp_lang_pop
 
 ### political backgr
 
