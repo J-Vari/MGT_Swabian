@@ -10,7 +10,7 @@ library(readr)
 library(here)
 library(stringr)
 library(tidytext)
-options(scipen=999)
+options(scipencount=999)
 
 # Task data
 ## read task data
@@ -101,7 +101,8 @@ origin_authen_male %>%
   mutate(deceived = case_when(
     any(deceived == 0) ~ 0,
     TRUE ~ deceived)) %>%
-  ungroup() -> origin_authen_male
+  ungroup() %>% 
+  select(-Response_tidy) -> origin_authen_male
 
 ## check unique identification of each response
 
@@ -253,7 +254,8 @@ origin_authen_female %>%
   mutate(deceived = case_when(
     any(deceived == 0) ~ 0,
     TRUE ~ deceived)) %>%
-  ungroup() -> origin_authen_female
+  ungroup() %>% 
+  select(-Response_tidy) -> origin_authen_female
 
 ## turn long into wide format to match 3 different data sets
 pivot_wider(origin_authen_female, names_from = "Target_Concept",
@@ -333,7 +335,8 @@ origin_authen_male_vs_female %>%
   mutate(deceived = case_when(
     any(deceived == 0) ~ 0,
     TRUE ~ deceived)) %>%
-  ungroup() -> origin_authen_male_vs_female
+  ungroup() %>% 
+  select(-Response_tidy) -> origin_authen_male_vs_female
 
 ## turn long into wide format to match 3 different data sets
 pivot_wider(origin_authen_male_vs_female, names_from = "Target_Concept",
@@ -353,7 +356,7 @@ questionnaire
 
 questionnaire%>%
   filter(`Event Index` != "END OF FILE")%>%
-  select ("Participant Public ID", "Participant Private ID", "Participant Status", "UTC Timestamp", "Participant OS", "Participant Browser", "Task Name", "counterbalance-nimi", "counterbalance-x3xi", "counterbalance-xq3l", "randomiser-rtb5", "age", "gender", "state_of_residence", "education_school", "education_profession1", "education_profession2", "income", "profession", "profession-text", starts_with("languages_caregiver1"), starts_with("languages-caregiver2"), starts_with("political_"), "other_languages", "own_dialect", "own_dialect-quantised", "party", "party-text", "party-quantised", matches("^social_desirability_[A-I]-quantised$"), matches("^populism_[A-D]$"))-> questionnaire
+  select ("Participant Public ID", "Participant Private ID", "Participant Status", "UTC Timestamp", "Participant OS", "Participant Browser", "Task Name", "counterbalance-nimi", "counterbalance-x3xi", "counterbalance-xq3l", "randomiser-rtb5", "age", "gender", "state_of_residence", "education_school", "education_profession1", "education_profession2", "income", "profession", "profession-text", starts_with("languages_caregiver1"), starts_with("languages_caregiver2"), starts_with("political_"), "other_languages", "own_dialect", "own_dialect-quantised", "party", "party-text", "party-quantised", matches("^social_desirability_[A-I]-quantised$"), matches("^populism_[A-D]$"))-> questionnaire
 
 # prep: assign classes
 as.factor(questionnaire$`Participant Private ID`)->questionnaire$`Participant Private ID`
@@ -389,8 +392,6 @@ questionnaire%>%
 
 questionnaire%>%
   select("Participant Private ID", starts_with("languages_caregiver1"), starts_with("languages_caregiver2"), "other_languages", "own_dialect", "party", "party-text", matches("^social_desirability_[A-I]-quantised$"), matches("^populism_[A-D]$"), starts_with("political_"))-> pp_lang_pop
-
-
 
 ## create new dummy variables education
 
@@ -517,6 +518,8 @@ pp_lang_pop%>%
 
 pp_lang_pop%>%
   summarise(mean(own_dialect), sd (own_dialect), min (own_dialect), max(own_dialect))->own_lang.variety
+
+
 
 
 ## unite two separate data sets for further analyses
