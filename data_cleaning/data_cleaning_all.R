@@ -372,7 +372,6 @@ as.numeric(questionnaire$political_spectrum)->questionnaire$political_spectrum
 as.numeric(questionnaire$own_dialect)->questionnaire$own_dialect
 as.factor(questionnaire$party)->questionnaire$party
 
-
 # identify multiple participation#
 
 questionnaire %>%
@@ -392,6 +391,7 @@ questionnaire%>%
 
 questionnaire%>%
   select("Participant Private ID", starts_with("languages_caregiver1"), starts_with("languages_caregiver2"), "other_languages", "own_dialect", "party", "party-text", matches("^social_desirability_[A-I]-quantised$"), matches("^populism_[A-D]$"), starts_with("political_"))-> pp_lang_pop
+
 
 ## create new dummy variables education
 
@@ -424,7 +424,6 @@ pp_bckgr%>%
             education_school == "bin noch Schüler/in" ~ "still at school",
             education_school == "andere" ~ "other",
             education_school == "NA" ~ "NA", TRUE ~ NA))-> pp_bckgr
-
 
 
 # create summary tables:
@@ -490,20 +489,90 @@ pp_bckgr%>%
 
 ## summary to check: pp lang. & political bckgr
 
-
 pp_lang_pop%>%
   select( -`political_orientation_A-quantised`, -`political_orientation_B-quantised`, -`political_orientation_C-quantised`, -`political_orientation_D-quantised`, -`political_spectrum_other-quantised`)->pp_lang_pop
 
-pp_lang_pop%>%
-  pivot_longer(starts_with("languages_caregiver1"), names_to = "variety_numeric1", values_to = "lang.variety1") %>%
-  pivot_longer(starts_with("languages_caregiver2"), names_to = "variety_numeric2", values_to = "lang.variety2")->pp_lang_pop
+### turn the two variables that give info about the caregivers' languages into one
+pp_lang_pop %>%
+  pivot_longer(cols = starts_with("languages_caregiver1") & !contains("languages_caregiver1-text"), names_to = "variety_numeric1", values_to = "lang.variety1") %>%
+  pivot_longer(cols = starts_with("languages_caregiver2") & !contains("languages_caregiver2-text"), names_to = "variety_numeric2", values_to = "lang.variety2") -> pp_lang_pop
 
 pp_lang_pop%>%
   drop_na(lang.variety1, lang.variety2)%>%
   select (-`variety_numeric1`, -`variety_numeric2`)->pp_lang_pop
 
+pp_lang_pop %>%
+  pivot_longer(cols = c(lang.variety1, lang.variety2), names_to = "col_names", values_to = "lang.variety") %>%
+  select(-col_names) -> pp_lang_pop
+
 pp_lang_pop%>%
-  select(`Participant Private ID`, other_languages, own_dialect, lang.variety1, lang.variety2, everything())->pp_lang_pop
+  select(`Participant Private ID`, other_languages, own_dialect, lang.variety, everything())->pp_lang_pop
+
+### Filter responses to the open text field regarding the languages of the caregivers
+pp_lang_pop %>%
+  distinct() -> pp_lang_pop #remove duplicates (result of merging two variables showing the languages of two caregivers into one)
+
+pp_lang_pop %>%
+  mutate(`languages_caregiver1-text_cap` = str_to_lower(`languages_caregiver1-text`),
+         `languages_caregiver2-text_cap` = str_to_lower(`languages_caregiver2-text`)) -> pp_lang_pop
+
+#### merge two variables into one
+pp_lang_pop %>%
+pivot_longer(cols = c(`languages_caregiver1-text_cap`, `languages_caregiver2-text_cap`), names_to = "col_names", values_to = "languages_caregivers-text") %>%
+  drop_na(`languages_caregivers-text`) %>%
+  select(-col_names) -> pp_lang_pop
+
+#### clean up data frame so that the values of languages_caregivers-text only appears in the rows where lang.variety == "Anderer Dialekt"
+pp_lang_pop %>%
+  mutate(`languages_caregivers-text` = case_when(
+    lang.variety != "Anderer Dialekt" ~ NA_character_,
+    TRUE ~ `languages_caregivers-text`)) -> pp_lang_pop
+
+#### filter  
+pp_lang_pop %>%
+  separate_rows(`languages_caregivers-text`, sep = ",") %>% 
+  separate_rows(`languages_caregivers-text`, sep = "/") %>%
+  separate_rows(`languages_caregivers-text`, sep = "\\s*\\bund\\b\\s*") %>%
+  mutate(`languages_caregivers-text` = str_trim(`languages_caregivers-text`)) -> pp_lang_pop
+
+pp_lang_pop %>%
+  mutate(`languages_caregivers-text` = str_to_title(`languages_caregivers-text`)) -> pp_lang_pop
+
+#### homogenize typos for subcategories
+pp_lang_pop %>%
+  mutate(lang.caregivers_sub = case_when(
+    `languages_caregivers-text` %in% c("Berlin", "Berliner", "Berliner Deutsch", "Berliner Dialekt", "Berlinerisch") ~ "Berlinerisch",
+    `languages_caregivers-text` %in% c("Ruhrgebiet", "Ruhrpott", "Ruhrpottslang", "Ruhrdeutsch") ~ "Ruhrdeutsch",
+    `languages_caregivers-text` %in% c("Brandenburg", "Brandenburgisch") ~ "Brandenburgisch",
+    `languages_caregivers-text` %in% c("Fränkisch", "Plattdeutsch", "Bayrisch") ~ NA_character_,
+    TRUE ~ `languages_caregivers-text`
+  )) -> pp_lang_pop
+
+#### sort answers into existing categories
+pp_lang_pop %>%
+  mutate(lang.caregivers_hom = case_when(
+    `languages_caregivers-text` %in% c("Bayrisch", "Münchnerisch") ~ "Bairisch",
+    lang.caregivers_sub == "Berlinerisch" ~ "Ostdeutsch",
+    `languages_caregivers-text` %in% c("Russisch", "Ungarisch", "Venezianisch", "Polnisch") ~ "Dialekt/Sprache aus dem nicht-deutschsprachigen Ausland",
+    `languages_caregivers-text` %in% c("Ruhrgebiet", "Ruhrpott", "Ruhrpottslang", "Ruhrdeutsch") ~ "Ruhrdeutsch",
+    `languages_caregivers-text` %in% c("Mannheimerisch", "Oberpfälzerisch", "Kurpfälzisch") ~ "Pfälzisch",
+    `languages_caregivers-text` == "Rheinhessisch" ~ "Hessisch",
+    `languages_caregivers-text` %in% c("Niederösterreichisch", "Wienerisch") ~ "Österreichisch",
+    `languages_caregivers-text` %in% c("Schlesisch", "Oberlausitzer Dialekt", "Vogtlandisch (Fränkisch)", "Niederlausitzer Mundart", "Brandenburg", "Brandenburgisch", "Erzgebirgisch") ~ "Ostdeutsch",
+    `languages_caregivers-text` %in% c("Siegerländer Plattdeutsch", "Eifeler Deutsch") ~ "Moselfränkisch",
+    `languages_caregivers-text` == "Kölsch" ~ "Rheinisch",
+    `languages_caregivers-text` == "Fränkisch" ~ "Fränkisch",
+    `languages_caregivers-text` == "Plattdeutsch" ~ "Plattdeutsch"
+    )) -> pp_lang_pop
+
+pp_lang_pop %>%
+  mutate(lang.variety = case_when(
+    lang.variety == "Anderer Dialekt" & lang.caregivers_hom %in% c("Hochdeutsch", "Alemannisch", "Badisch", "Bairisch", "Fränkisch", "Schweizerdeutsch", "Hessisch", "Moselfränkisch", "Norddeutsch", "Österreichisch", "Ostdeutsch", "Pfälzisch", "Rheinisch", "Saarländisch", "Sächsisch", "Schwäbisch", "Thüringisch", "Plattdeutsch", "Dialekt/Sprache aus dem nicht-deutschsprachigen Ausland", "Ich weiß nicht", "Anderer Dialekt") ~ lang.caregivers_hom,
+    TRUE ~ lang.variety)) -> pp_lang_pop
+
+pp_lang_pop %>%
+  select(-`languages_caregiver1-text`, -`languages_caregiver2-text`) -> pp_lang_pop
+
 
 ### political backgr
 
