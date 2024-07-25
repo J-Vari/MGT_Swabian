@@ -9,7 +9,8 @@ library(car)
 library(readr)
 library(here)
 library(stringr)
-options(scipen=999)
+library(tidytext)
+options(scipencount=999)
 
 # Task data
 ## read task data
@@ -113,6 +114,25 @@ origin_authen_male %>%
       `Object ID` == "object-1145" ~ "Paradigm check 1",
       `Object ID` == "object-1146" ~ "Paradigm check 2",
       TRUE ~ Target_Concept)) -> origin_authen_male
+
+
+# Identify those participants that were not deceived by the speaker illusion
+## Preprocess answers to open text fields
+origin_authen_male %>%
+  mutate(Response_tidy = str_to_lower(Response)) -> origin_authen_male
+
+## Create new variable (1 = deceived, 0 = not deceived)
+origin_authen_male %>%
+  mutate(deceived = ifelse(str_detect(Response_tidy, "(gleich|selb).{0,2} (person|sprecher|sprechende).*") |
+           str_detect(Response_tidy, "(stimm).{0,2} (verstell).*"), 0, 1)) -> origin_authen_male
+
+origin_authen_male %>%
+  group_by(`Participant Public ID`) %>%
+  mutate(deceived = case_when(
+    any(deceived == 0) ~ 0,
+    TRUE ~ deceived)) %>%
+  ungroup() %>% 
+  select(-Response_tidy) -> origin_authen_male
 
 ## check unique identification of each response
 
@@ -254,6 +274,24 @@ origin_authen_female %>%
       TRUE ~ Target_Concept)) %>%
   select(-`Object ID`) -> origin_authen_female
 
+# Identify those participants that were not deceived by the speaker illusion
+## Preprocess answers to open text fields
+origin_authen_female %>%
+  mutate(Response_tidy = str_to_lower(Response)) -> origin_authen_female
+
+## Create new variable (1 = deceived, 0 = not deceived)
+origin_authen_female %>%
+  mutate(deceived = ifelse(str_detect(Response_tidy, "(gleich|selb).{0,2} (person|sprecher|sprechende).*") |
+                             str_detect(Response_tidy, "(stimm).{0,2} (verstell).*"), 0, 1)) -> origin_authen_female
+
+origin_authen_female %>%
+  group_by(`Participant Public ID`) %>%
+  mutate(deceived = case_when(
+    any(deceived == 0) ~ 0,
+    TRUE ~ deceived)) %>%
+  ungroup() %>% 
+  select(-Response_tidy) -> origin_authen_female
+
 ## turn long into wide format to match 3 different data sets
 pivot_wider(origin_authen_female, names_from = "Target_Concept",
             values_from = "Response", values_fill = NA)->origin_authen_female
@@ -326,6 +364,24 @@ origin_authen_male_vs_female %>%
       TRUE ~ Target_Concept)) %>%
   select(-`Object ID`) -> origin_authen_male_vs_female
 
+# Identify those participants that were not deceived by the speaker illusion
+## Preprocess answers to open text fields
+origin_authen_male_vs_female %>%
+  mutate(Response_tidy = str_to_lower(Response)) -> origin_authen_male_vs_female
+
+## Create new variable (1 = deceived, 0 = not deceived)
+origin_authen_male_vs_female %>%
+  mutate(deceived = ifelse(str_detect(Response_tidy, "(gleich|selb).{0,2} (person|sprecher|sprechende).*") |
+                             str_detect(Response_tidy, "(stimm).{0,2} (verstell).*"), 0, 1)) -> origin_authen_male_vs_female
+
+origin_authen_male_vs_female %>%
+  group_by(`Participant Public ID`) %>%
+  mutate(deceived = case_when(
+    any(deceived == 0) ~ 0,
+    TRUE ~ deceived)) %>%
+  ungroup() %>% 
+  select(-Response_tidy) -> origin_authen_male_vs_female
+
 ## turn long into wide format to match 3 different data sets
 pivot_wider(origin_authen_male_vs_female, names_from = "Target_Concept",
             values_from = "Response", values_fill = NA)->origin_authen_male_vs_female
@@ -359,7 +415,6 @@ as.factor(questionnaire$profession)->questionnaire$profession
 as.numeric(questionnaire$political_spectrum)->questionnaire$political_spectrum
 as.numeric(questionnaire$own_dialect)->questionnaire$own_dialect
 as.factor(questionnaire$party)->questionnaire$party
-
 
 # identify multiple participation#
 
@@ -421,40 +476,16 @@ pp_bckgr%>%
   ungroup()%>%
   summarise(n_distinct(`Participant Public ID`))#1315
 
-## data set 2: check specific IVs language & populism
+## create summary tables for pp_bckgr
 
-questionnaire%>%
-  select("Participant Public ID", starts_with("languages_caregiver1"), starts_with("languages_caregiver2"), "other_languages", "own_dialect", "party", "party-text", matches("^social_desirability_[A-I]-quantised$"), matches("^populism_[A-D]$"), starts_with("political_"))-> pp_lang_pop
-
-pp_lang_pop%>%
-  select( -`political_orientation_A-quantised`, -`political_orientation_B-quantised`, -`political_orientation_C-quantised`, -`political_orientation_D-quantised`, -`political_spectrum_other-quantised`)%>%
-  pivot_longer(cols = 2:23, names_to = "variety_numeric", values_to = "lang.variety")%>%
-  drop_na(lang.variety)-> pp_lang_pop
-
-pp_lang_pop%>%
-  group_by (`Participant Public ID`)%>%
-  count(`Participant Public ID`)-> pp_lang_pop_rows # 1-7 rows per pp
-
-pp_lang_pop%>%
-  add_count(`Participant Public ID`)%>%
-  filter(n > 1)%>%
-  distinct()-> duplicates
-
-## join to questionnaire data sets: 
-pp_lang_pop%>%
-left_join (pp_bckgr, by= c("Participant Public ID" = "Participant Public ID"))-> combined_questionnaire
-
-
-# create summary tables:
-
-## summary to check randomization:
+## check randomization:
 
 pp_bckgr%>%
   group_by(`randomiser-rtb5`,`counterbalance-nimi`, `counterbalance-x3xi`, `counterbalance-xq3l`)%>%
   summarise(n_distinct(`Participant Public ID`))->random
 
 
-## summary to check: participant background
+## check: participant background
 
 ### federal state
 
@@ -506,20 +537,118 @@ pp_bckgr%>%
 
 
 
+## data set 2: check specific IVs language & populism
+
+questionnaire%>%
+  select("Participant Public ID", starts_with("languages_caregiver1"), starts_with("languages_caregiver2"), "other_languages", "own_dialect", "party", "party-text", matches("^social_desirability_[A-I]-quantised$"), matches("^populism_[A-D]$"), starts_with("political_"))-> pp_lang_pop
+
+pp_lang_pop%>%
+  select( -`political_orientation_A-quantised`, -`political_orientation_B-quantised`, -`political_orientation_C-quantised`, -`political_orientation_D-quantised`, -`political_spectrum_other-quantised`)%>%
+  pivot_longer(cols = 2:23, names_to = "variety_numeric", values_to = "lang.variety")%>%
+  drop_na(lang.variety)-> pp_lang_pop
+
+### Filter responses to the open text field regarding the languages of the caregivers
+pp_lang_pop %>%
+  distinct() -> pp_lang_pop #remove duplicates (result of merging two variables showing the languages of two caregivers into one)
+
+pp_lang_pop %>%
+  mutate(`languages_caregiver1-text_cap` = str_to_lower(`languages_caregiver1-text`),
+         `languages_caregiver2-text_cap` = str_to_lower(`languages_caregiver2-text`)) -> pp_lang_pop
+
+#### merge two variables into one
+pp_lang_pop %>%
+pivot_longer(cols = c(`languages_caregiver1-text_cap`, `languages_caregiver2-text_cap`), names_to = "col_names", values_to = "languages_caregivers-text") %>%
+  drop_na(`languages_caregivers-text`) %>%
+  select(-col_names) -> pp_lang_pop
+
+#### clean up data frame so that the values of languages_caregivers-text only appears in the rows where lang.variety == "Anderer Dialekt"
+pp_lang_pop %>%
+  mutate(`languages_caregivers-text` = case_when(
+    lang.variety != "Anderer Dialekt" ~ NA_character_,
+    TRUE ~ `languages_caregivers-text`)) -> pp_lang_pop
+
+#### filter  
+pp_lang_pop %>%
+  separate_rows(`languages_caregivers-text`, sep = ",") %>% 
+  separate_rows(`languages_caregivers-text`, sep = "/") %>%
+  separate_rows(`languages_caregivers-text`, sep = "\\s*\\bund\\b\\s*") %>%
+  mutate(`languages_caregivers-text` = str_trim(`languages_caregivers-text`)) -> pp_lang_pop
+
+pp_lang_pop %>%
+  mutate(`languages_caregivers-text` = str_to_title(`languages_caregivers-text`)) -> pp_lang_pop
+
+#### homogenize typos for subcategories
+pp_lang_pop %>%
+  mutate(lang.caregivers_sub = case_when(
+    `languages_caregivers-text` %in% c("Berlin", "Berliner", "Berliner Deutsch", "Berliner Dialekt", "Berlinerisch") ~ "Berlinerisch",
+    `languages_caregivers-text` %in% c("Ruhrgebiet", "Ruhrpott", "Ruhrpottslang", "Ruhrdeutsch") ~ "Ruhrdeutsch",
+    `languages_caregivers-text` %in% c("Brandenburg", "Brandenburgisch") ~ "Brandenburgisch",
+    `languages_caregivers-text` %in% c("Fränkisch", "Plattdeutsch", "Bayrisch") ~ NA_character_,
+    TRUE ~ `languages_caregivers-text`
+  )) -> pp_lang_pop
+
+#### sort answers into existing categories
+pp_lang_pop %>%
+  mutate(lang.caregivers_hom = case_when(
+    `languages_caregivers-text` %in% c("Bayrisch", "Münchnerisch") ~ "Bairisch",
+    lang.caregivers_sub == "Berlinerisch" ~ "Ostdeutsch",
+    `languages_caregivers-text` %in% c("Russisch", "Ungarisch", "Venezianisch", "Polnisch") ~ "Dialekt/Sprache aus dem nicht-deutschsprachigen Ausland",
+    `languages_caregivers-text` %in% c("Ruhrgebiet", "Ruhrpott", "Ruhrpottslang", "Ruhrdeutsch") ~ "Ruhrdeutsch",
+    `languages_caregivers-text` %in% c("Mannheimerisch", "Oberpfälzerisch", "Kurpfälzisch") ~ "Pfälzisch",
+    `languages_caregivers-text` == "Rheinhessisch" ~ "Hessisch",
+    `languages_caregivers-text` %in% c("Niederösterreichisch", "Wienerisch") ~ "Österreichisch",
+    `languages_caregivers-text` %in% c("Schlesisch", "Oberlausitzer Dialekt", "Vogtlandisch (Fränkisch)", "Niederlausitzer Mundart", "Brandenburg", "Brandenburgisch", "Erzgebirgisch") ~ "Ostdeutsch",
+    `languages_caregivers-text` %in% c("Siegerländer Plattdeutsch", "Eifeler Deutsch") ~ "Moselfränkisch",
+    `languages_caregivers-text` == "Kölsch" ~ "Rheinisch",
+    `languages_caregivers-text` == "Fränkisch" ~ "Fränkisch",
+    `languages_caregivers-text` == "Plattdeutsch" ~ "Plattdeutsch"
+    )) -> pp_lang_pop
+
+pp_lang_pop %>%
+  mutate(lang.variety = case_when(
+    lang.variety == "Anderer Dialekt" & lang.caregivers_hom %in% c("Hochdeutsch", "Alemannisch", "Badisch", "Bairisch", "Fränkisch", "Schweizerdeutsch", "Hessisch", "Moselfränkisch", "Norddeutsch", "Österreichisch", "Ostdeutsch", "Pfälzisch", "Rheinisch", "Saarländisch", "Sächsisch", "Schwäbisch", "Thüringisch", "Plattdeutsch", "Dialekt/Sprache aus dem nicht-deutschsprachigen Ausland", "Ich weiß nicht", "Anderer Dialekt") ~ lang.caregivers_hom,
+    TRUE ~ lang.variety)) -> pp_lang_pop
+
+pp_lang_pop %>%
+  select(-`languages_caregiver1-text`, -`languages_caregiver2-text`) -> pp_lang_pop
+
+
+pp_lang_pop%>%
+  select( -`political_orientation_A-quantised`, -`political_orientation_B-quantised`, -`political_orientation_C-quantised`, -`political_orientation_D-quantised`, -`political_spectrum_other-quantised`)->pp_lang_pop
+
+### turn the two variables that give info about the caregivers' languages into one
+pp_lang_pop %>%
+  pivot_longer(cols = starts_with("languages_caregiver1") & !contains("languages_caregiver1-text"), names_to = "variety_numeric1", values_to = "lang.variety1") %>%
+  pivot_longer(cols = starts_with("languages_caregiver2") & !contains("languages_caregiver2-text"), names_to = "variety_numeric2", values_to = "lang.variety2") -> pp_lang_pop
+
+pp_lang_pop%>%
+  drop_na(lang.variety1, lang.variety2)%>%
+  select (-`variety_numeric1`, -`variety_numeric2`)->pp_lang_pop
+
+pp_lang_pop %>%
+  pivot_longer(cols = c(lang.variety1, lang.variety2), names_to = "col_names", values_to = "lang.variety") %>%
+  select(-col_names) -> pp_lang_pop
+
+
 ## summary tables for pp lang. & political bckgr
+
+pp_lang_pop%>%
+  group_by (`Participant Public ID`)%>%
+  count(`Participant Public ID`)-> pp_lang_pop_rows # 1-7 rows per pp
+
+pp_lang_pop%>%
+  add_count(`Participant Public ID`)%>%
+  filter(n > 1)%>%
+  distinct()-> duplicates
 
 
 pp_lang_pop%>%
   ungroup()%>%
   summarise(n_distinct(`Participant Public ID`))#1313
 
-### political backgr
-
 pp_lang_pop%>%
   group_by(party)%>%
   summarise(n_distinct(`Participant Public ID`))->sum_party
-
-### lang. variety
 
 pp_lang_pop%>%
   group_by(lang.variety)%>%
@@ -528,6 +657,10 @@ pp_lang_pop%>%
 pp_lang_pop%>%
   summarise(mean(own_dialect), sd (own_dialect), min (own_dialect), max(own_dialect))->own_lang.variety
 
+
+## join to questionnaire data sets: 
+pp_lang_pop%>%
+left_join (pp_bckgr, by= c("Participant Public ID" = "Participant Public ID"))-> combined_questionnaire
 
 
 #write_delim(questionnaire_final, here("data_processed", "questionnaires.csv"), col_names = TRUE, delim = ",")
