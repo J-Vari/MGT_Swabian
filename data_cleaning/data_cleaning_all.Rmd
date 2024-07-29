@@ -28,7 +28,7 @@ audio_eval_male <- read_delim(here("raw_data", "data_exp_86579-v59_task-ue28.csv
 ### relevant columns for audio evaluations & rename
 
 audio_eval_male%>%
-  select(`Participant Public ID`, `UTC Date and Time`, `UTC Timestamp`, `Response Type`, `Response`, `Object Name`, `Spreadsheet: Audio`, `Spreadsheet: Speaker`, `Spreadsheet: Speaker gender`, `Spreadsheet: Variety`,
+  select(`Participant Public ID`, `UTC Date and Time`, `UTC Timestamp`, `Response Type`, `Response`, `Object Name`, `Task Name`, `Spreadsheet: Audio`, `Spreadsheet: Speaker`, `Spreadsheet: Speaker gender`, `Spreadsheet: Variety`,
          `Spreadsheet: Political orientation`, `Spreadsheet: Stimulus number`, `Spreadsheet: Stimulus1`, `Spreadsheet: Stimulus2`, `Spreadsheet: Stimulus3`, `Spreadsheet: Stimulus4`, `Spreadsheet: Stimulus5`, 
          `Spreadsheet: Stimulus6`, `Spreadsheet: Attention Check`, `Store: Attention Check`)%>%
   rename(Audio_Track = `Spreadsheet: Audio`, Speaker = `Spreadsheet: Speaker`, Speaker_Gender = `Spreadsheet: Speaker gender`, Lang.Variety_Audio = `Spreadsheet: Variety`,
@@ -195,17 +195,27 @@ audio_eval_male %>%
                     "Audio_Track" = "Audio"))%>%
   select(-Variety)-> combined_tasks_male
 
+
 ## fill NAs with repeated values from origin_authen
 
-# Explicitly define the new columns to be filled
-new_columns_to_fill <- c("Response_Text_identity_lang.var", "Political level",
-                         "identity_lang.variety_non-st", "identity_lang.variety_st",
-                         "Paradigm check 1", "Paradigm check 2", "deceived")
+### define the new columns to be filled: 1 x answer each participant
+new_columns_to_fill_1 <- c("Political level", "Paradigm check 1", "Paradigm check 2", "deceived")
+
+### define the new columns to be filled: 2 x answer each participant depending audio
+
+new_columns_to_fill_2 <- c("Response_Text_identity_lang.var",                          "identity_lang.variety_non-st", "identity_lang.variety_st", "proximity_variety_non-st", "identity_lang.variety_non-st", "proximity_variety_st")
 
 # Fill missing values in the specified columns within each participant
  combined_tasks_male %>%
   group_by(`Participant Public ID`) %>%
-  fill(all_of(new_columns_to_fill), .direction = "downup") %>%
+  fill(all_of(new_columns_to_fill_1), .direction = "downup") %>%
+  ungroup()-> combined_tasks_male
+ 
+ # Fill missing values in the specified columns within each participant and audio
+ combined_tasks_male %>%
+   ungroup()%>%
+  group_by(`Participant Public ID`, Audio_Track) %>%
+  fill(all_of(new_columns_to_fill_2), .direction = "downup") %>%
   ungroup()-> combined_tasks_male
 ```
 # Check duplicates combined data
@@ -235,7 +245,7 @@ combined_tasks_male%>%
 
 combined_tasks_male%>%
   group_by (`Participant Public ID`)%>%
-  count(`Participant Public ID`)-> combined_tasks_male_rows # normal 168 but 4 pp above & below
+  count(`Participant Public ID`)-> combined_tasks_male_rows # normal 168 but 2 pp below
 ```
 # *Tasks female only*
 ## Audio evaluations 
@@ -245,7 +255,7 @@ audio_eval_female <- read_delim(here("raw_data", "data_exp_86579-v59_task-v697.c
 ### relevant columns for audio evaluations & rename
 
 audio_eval_female%>%
-  select(`Participant Public ID`, `UTC Date and Time`, `UTC Timestamp`, `Response Type`, `Response`, `Object Name`, `Spreadsheet: Audio`, `Spreadsheet: Speaker`, `Spreadsheet: Speaker gender`, `Spreadsheet: Variety`,
+  select(`Participant Public ID`, `UTC Date and Time`, `UTC Timestamp`, `Response Type`, `Response`, `Object Name`, `Task Name`, `Spreadsheet: Audio`, `Spreadsheet: Speaker`, `Spreadsheet: Speaker gender`, `Spreadsheet: Variety`,
          `Spreadsheet: Political orientation`, `Spreadsheet: Stimulus number`, `Spreadsheet: Stimulus1`, `Spreadsheet: Stimulus2`, `Spreadsheet: Stimulus3`, `Spreadsheet: Stimulus4`, `Spreadsheet: Stimulus5`, 
          `Spreadsheet: Stimulus6`, `Spreadsheet: Attention Check`, `Store: Attention Check`)%>%
   rename(Audio_Track = `Spreadsheet: Audio`, Speaker = `Spreadsheet: Speaker`, Speaker_Gender = `Spreadsheet: Speaker gender`, Lang.Variety_Audio = `Spreadsheet: Variety`,
@@ -359,11 +369,12 @@ origin_authen_female%>%
 
 origin_authen_female%>%
   ungroup()%>%
-  summarise(n_distinct(`Participant Public ID`))#446
+  summarise(n_distinct(`Participant Public ID`))#418
 
 
 origin_authen_female%>%
-  filter (`Participant Public ID` == "281162358237373" | `Participant Public ID` == "281082304369845" | `Participant Public ID` == "281251938576386")-> check_pp
+  filter (`Participant Public ID` == "281162358978623" | `Participant Public ID` == "281162358538243" | `Participant Public ID` == "280560572404941" | `Participant Public ID` == "281348585302158" )-> check_pp
+
 ## => double ratings/ duplicated coz pp changed their rating at a later time OR pp selected "__other" and added answer to open Q field
 
 
@@ -383,7 +394,7 @@ origin_authen_female%>%
   distinct(`Participant Public ID`, Audio, Target_Concept, Variety, .keep_all = TRUE)%>%
   select(-Response, -`Object ID`,-`UTC Date and Time`, -`UTC Timestamp`)->origin_authen_female
 ```
-# Prep origin & authenticity join
+### Prep origin & authenticity join
 
 ```{r female origin authenticity_wide}
 
@@ -416,15 +427,24 @@ audio_eval_female %>%
 
 ## fill NAs with repeated values from origin_authen
 
-# Explicitly define the new columns to be filled
-new_columns_to_fill <- c("Response_Text_identity_lang.var", "Political level",
-                         "identity_lang.variety_non-st", "identity_lang.variety_st",
-                         "Paradigm check 1", "Paradigm check 2", "deceived")
+### define the new columns to be filled: 1 x answer each participant
+new_columns_to_fill_1 <- c("Political level", "Paradigm check 1", "Paradigm check 2", "deceived")
+
+### define the new columns to be filled: 2 x answer each participant depending audio
+
+new_columns_to_fill_2 <- c("Response_Text_identity_lang.var",                          "identity_lang.variety_non-st", "identity_lang.variety_st", "proximity_variety_non-st", "identity_lang.variety_non-st", "proximity_variety_st")
 
 # Fill missing values in the specified columns within each participant
  combined_tasks_female %>%
   group_by(`Participant Public ID`) %>%
-  fill(all_of(new_columns_to_fill), .direction = "downup") %>%
+  fill(all_of(new_columns_to_fill_1), .direction = "downup") %>%
+  ungroup()-> combined_tasks_female
+ 
+ # Fill missing values in the specified columns within each participant and audio
+ combined_tasks_female %>%
+   ungroup()%>%
+  group_by(`Participant Public ID`, Audio_Track) %>%
+  fill(all_of(new_columns_to_fill_2), .direction = "downup") %>%
   ungroup()-> combined_tasks_female
 ```
 # Check duplicates combined data
@@ -454,7 +474,7 @@ combined_tasks_female%>%
 
 combined_tasks_female%>%
   group_by (`Participant Public ID`)%>%
-  count(`Participant Public ID`)-> combined_tasks_female_rows # normal 168 but 4 pp above & below
+  count(`Participant Public ID`)-> combined_tasks_female_rows # normal 168 but 1 pp below
 ```
 # *Tasks Male vs. Female tasks*
 ## Audio evaluation
@@ -462,9 +482,10 @@ combined_tasks_female%>%
 ## read data
 audio_eval_male_vs_female <-read_delim(here("raw_data", "data_exp_86579-v59_task-mdix.csv"), col_names = TRUE, delim = ",")
 
-## select relevant columns for audio evaluations & rename
+### relevant columns for audio evaluations & rename
+
 audio_eval_male_vs_female%>%
-  select(`Participant Public ID`, `Response Type`, `Response`, `Object Name`, `Spreadsheet: Audio`, `Spreadsheet: Speaker`, `Spreadsheet: Speaker gender`, `Spreadsheet: Variety`,
+  select(`Participant Public ID`, `UTC Date and Time`, `UTC Timestamp`, `Response Type`, `Response`, `Object Name`, `Task Name`, `Spreadsheet: Audio`, `Spreadsheet: Speaker`, `Spreadsheet: Speaker gender`, `Spreadsheet: Variety`,
          `Spreadsheet: Political orientation`, `Spreadsheet: Stimulus number`, `Spreadsheet: Stimulus1`, `Spreadsheet: Stimulus2`, `Spreadsheet: Stimulus3`, `Spreadsheet: Stimulus4`, `Spreadsheet: Stimulus5`, 
          `Spreadsheet: Stimulus6`, `Spreadsheet: Attention Check`, `Store: Attention Check`)%>%
   rename(Audio_Track = `Spreadsheet: Audio`, Speaker = `Spreadsheet: Speaker`, Speaker_Gender = `Spreadsheet: Speaker gender`, Lang.Variety_Audio = `Spreadsheet: Variety`,
@@ -474,85 +495,230 @@ audio_eval_male_vs_female%>%
 
 ## remove markdown from values
 audio_eval_male_vs_female%>%
-  mutate(across(starts_with("Spreadsheet:"), ~ str_remove_all(., "\\*\\*")))-> audio_eval_male_vs_female
+mutate(across(starts_with("Spreadsheet:"), ~ str_remove_all(., "\\*\\*")))-> audio_eval_male_vs_female
 
 ## create one column with attribute related to rating
 audio_eval_male_vs_female%>%
-  mutate(Attribute = case_when(
-    `Object Name` == "RatingScale_Stimulus1" ~ `Spreadsheet: Stimulus1`,
-    `Object Name` == "RatingScale_Stimulus2" ~ `Spreadsheet: Stimulus2`,
-    `Object Name` == "RatingScale_Stimulus3" ~ `Spreadsheet: Stimulus3`,
-    `Object Name` == "RatingScale_Stimulus4" ~ `Spreadsheet: Stimulus4`,
-    `Object Name` == "RatingScale_Stimulus5" ~ `Spreadsheet: Stimulus5`,
-    `Object Name` == "RatingScale_Stimulus6" ~ `Spreadsheet: Stimulus6`,
-    `Object Name` == "RatingScale_AttentionCheck" ~ `Spreadsheet: Attention Check`))->audio_eval_male_vs_female
+mutate(Attribute = case_when(
+  `Object Name` == "RatingScale_Stimulus1" ~ `Spreadsheet: Stimulus1`,
+  `Object Name` == "RatingScale_Stimulus2" ~ `Spreadsheet: Stimulus2`,
+  `Object Name` == "RatingScale_Stimulus3" ~ `Spreadsheet: Stimulus3`,
+  `Object Name` == "RatingScale_Stimulus4" ~ `Spreadsheet: Stimulus4`,
+  `Object Name` == "RatingScale_Stimulus5" ~ `Spreadsheet: Stimulus5`,
+  `Object Name` == "RatingScale_Stimulus6" ~ `Spreadsheet: Stimulus6`,
+  `Object Name` == "RatingScale_AttentionCheck" ~ `Spreadsheet: Attention Check`))->audio_eval_male_vs_female
 
 ## delete unnecessary columns & elaborate levels of categorical variables
 audio_eval_male_vs_female%>%
-  select(-starts_with("Spreadsheet:"), -`Response Type`) %>%
-  mutate(Speaker_Gender = ifelse(Speaker_Gender=="f", "female", "male"))%>%
+  select(-starts_with("Spreadsheet:"), -`Response Type`)%>%
+  mutate(Speaker_Gender = ifelse(Speaker_Gender=="FALSE", "female", "male"))%>%
   mutate (Polit_ori = ifelse(Polit_ori == "l", "left", "right"))%>%
   mutate (Lang.Variety_Audio = ifelse(Lang.Variety_Audio == "st", "Standard German", "Regional Variety"))-> audio_eval_male_vs_female
 
+## Identify-final-accuracy
 ## select final response attention check accuracy
 audio_eval_male_vs_female %>%
+  ungroup()%>%
   group_by(`Participant Public ID`) %>%
-  mutate(Att.check_acc_last = last(Att.check_acc)) -> audio_eval_male_vs_female
-
-audio_eval_male_vs_female %>%
+  mutate(Att.check_acc_last = last(Att.check_acc))%>%
   select(-Att.check_acc) %>%
   rename(Att.check_acc = Att.check_acc_last) -> audio_eval_male_vs_female
+
+audio_eval_male_vs_female%>%
+  distinct()->audio_eval_male_vs_female
+
+## duplicates & data loss in audio_eval_male?
+audio_eval_male_vs_female%>%
+  group_by(`Participant Public ID`)%>%
+  count()-> pp_rows # 3 pp not normal row no of 112 but above (224, 119)
+
 ```
 ## Origin & authenticity
 ```{r male_vs_female origin & authenticity}
 # read data
 origin_authen_male_vs_female <-read_delim(here("raw_data", "data_exp_86579-v59_task-r61o.csv"), col_names = TRUE, delim = ",")
 
-## clean origin_authen_male_vs_female & elaborate Origin & authenticity column
+#elaborate columns
+
 origin_authen_male_vs_female%>%
-  select(`Participant Public ID`, `Response Type`, Response, `Spreadsheet: Display`, `Spreadsheet: Audio`, `Spreadsheet: Variety`, `Object ID`)%>%
+  select(`Participant Public ID`, `Response Type`, Response, `Spreadsheet: Display`, `Spreadsheet: Audio`, `Spreadsheet: Variety`, `Object ID`, `UTC Date and Time`, `UTC Timestamp`)%>%
   rename(Target = `Spreadsheet: Display`, Audio = `Spreadsheet: Audio`, Variety = `Spreadsheet: Variety`)%>%
   filter (`Response Type` == "response")%>%
   mutate(Target_Concept = case_when(
     Target == "Political level" ~ "Political level",
     Target == "Paradigm check" ~ "Paradigm check",
-    Target == "Origin & authenticity" & grepl("^[0-9]+$", Response) ~ "proximity_standard.variety",
-    Target == "Origin & authenticity" & !grepl("^[0-9]+$", Response) ~ "identity_lang.variety",
+    Target == "Origin & authenticity" & grepl("^[0-9]+$", Response) & Variety == "non-st" ~ "proximity_variety_non-st",
+    Target == "Origin & authenticity" & grepl("^[0-9]+$", Response) & Variety == "st" ~ "proximity_variety_st",
+    Target == "Origin & authenticity" & !grepl("^[0-9]+$", Response) & Variety == "st" ~ "identity_lang.variety_st",
+    Target == "Origin & authenticity" & !grepl("^[0-9]+$", Response) & Variety == "non-st" ~ "identity_lang.variety_non-st",
     TRUE ~ NA_character_))%>%
   filter(Response != "continue")%>%
-  select(-`Response Type`, -Target) %>%
-  select(`Participant Public ID`, Response, Target_Concept, Audio, Variety, `Object ID`)-> origin_authen_male_vs_female
-
+  select(-`Response Type`, -Target)%>%
+  select(`Participant Public ID`, Response, Target_Concept, Audio, Variety, `Object ID`, `UTC Date and Time`, `UTC Timestamp`)-> origin_authen_male_vs_female
+```
+### clean open text "Paradigm Check"
+```{r male_vs_female orin_authen_para}
 ## separate Paradigm Check Level
 origin_authen_male_vs_female %>%
   mutate(
     Target_Concept = case_when(
       `Object ID` == "object-1145" ~ "Paradigm check 1",
       `Object ID` == "object-1146" ~ "Paradigm check 2",
-      TRUE ~ Target_Concept)) %>%
-  select(-`Object ID`) -> origin_authen_male_vs_female
+      TRUE ~ Target_Concept)) -> origin_authen_male_vs_female
 
-# Identify those participants that were not deceived by the speaker illusion
+# Identify  participants not deceived by the speaker illusion
 ## Preprocess answers to open text fields
 origin_authen_male_vs_female %>%
   mutate(Response_tidy = str_to_lower(Response)) -> origin_authen_male_vs_female
 
 ## Create new variable (1 = deceived, 0 = not deceived)
 origin_authen_male_vs_female %>%
-  mutate(deceived = ifelse(str_detect(Response_tidy, "(gleich|selb).{0,2} (person|sprecher|sprechende).*") |
-                             str_detect(Response_tidy, "(stimm).{0,2} (verstell).*"), 0, 1)) -> origin_authen_male_vs_female
-
-origin_authen_male_vs_female %>%
+  mutate(deceived = ifelse(str_detect(Response_tidy, "(gleich|selb).{0,2} (person|sprecher|sprechende|stimme).*") |
+           str_detect(Response_tidy, "(stimm).{0,2} (verstell).*"), 0, 1))%>%
   group_by(`Participant Public ID`) %>%
   mutate(deceived = case_when(
     any(deceived == 0) ~ 0,
     TRUE ~ deceived)) %>%
   ungroup() %>% 
   select(-Response_tidy) -> origin_authen_male_vs_female
+```
+### origin & authenticity duplicates
+```{r male_vs_female origin authenticity_dupl}
 
-## turn long into wide format to match 3 different data sets
-pivot_wider(origin_authen_male_vs_female, names_from = "Target_Concept",
-            values_from = "Response", values_fill = NA)->origin_authen_male_vs_female
+## Check duplicates
+origin_authen_male_vs_female%>%
+  group_by(`Participant Public ID`, Audio) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  filter(n > 1L)-> duplicates
+
+origin_authen_male_vs_female%>%
+  group_by (`Participant Public ID`)%>%
+  count(`Participant Public ID`)-> pp_bckgr_rows
+
+origin_authen_male_vs_female%>%
+  ungroup()%>%
+  summarise(n_distinct(`Participant Public ID`))#451
+
+
+## => double ratings/ duplicated coz pp changed their rating at a later time OR pp selected "__other" and added answer to open Q field
+
+
+## create 2 new columns
+### 1) select later response of pp depending on Time Stamp
+
+origin_authen_male_vs_female %>%
+  group_by(`Participant Public ID`, Audio, Target_Concept) %>%
+  mutate(Response_corrected = Response[which.max(`UTC Timestamp`)])->origin_authen_male_vs_female
+
+## 2) if "_other" selected, next line text box entry into new column, then drop duplicated "_other"
+
+origin_authen_male_vs_female%>%
+  mutate(Response_Text_identity_lang.var = ifelse(Response == "__other", lead(Response), NA))%>%
+  ungroup()%>%
+  filter(!(Response_corrected == "__other" & is.na(Response_Text_identity_lang.var)))%>%
+  distinct(`Participant Public ID`, Audio, Target_Concept, Variety, .keep_all = TRUE)%>%
+  select(-Response, -`Object ID`,-`UTC Date and Time`, -`UTC Timestamp`)->origin_authen_male_vs_female
+```
+# Prep origin & authenticity join
+
+```{r male_vs_female origin authenticity_wide}
+
+## turn long into wide format to match different data sets
+origin_authen_male_vs_female%>%
+  pivot_wider(names_from = "Target_Concept",
+              values_from = "Response_corrected")->origin_authen_male_vs_female
+
+## fill NAs with repeated values in new columns from origin_authen
+
+# Explicitly define the new columns to be filled
+new_columns_to_fill <- c("Response_Text_identity_lang.var", "Political level",
+                         "identity_lang.variety_non-st", "identity_lang.variety_st",
+                         "Paradigm check 1", "Paradigm check 2", "deceived")
+
+# Fill missing values in the specified columns within each participant
+ origin_authen_male_vs_female %>%
+  group_by(`Participant Public ID`) %>%
+  fill(all_of(new_columns_to_fill), .direction = "downup") %>%
+  ungroup()-> origin_authen_male_vs_female
+```
+## Combine 2 data sets: audio eval, origin & authenticity
+```{r male_vs_female combine tasks}
+
+audio_eval_male_vs_female %>%
+   left_join(origin_authen_male_vs_female, 
+             by = c("Participant Public ID" = "Participant Public ID", 
+                    "Audio_Track" = "Audio"))%>%
+  select(-Variety)-> combined_tasks_male_vs_female
+
+## fill NAs with repeated values from origin_authen
+
+### define the new columns to be filled: 1 x answer each participant
+new_columns_to_fill_1 <- c("Political level", "Paradigm check 1", "Paradigm check 2", "deceived")
+
+### define the new columns to be filled: 2 x answer each participant depending audio
+
+new_columns_to_fill_2 <- c("Response_Text_identity_lang.var",                          "identity_lang.variety_non-st", "identity_lang.variety_st", "proximity_variety_non-st", "identity_lang.variety_non-st", "proximity_variety_st")
+
+# Fill missing values in the specified columns within each participant
+ combined_tasks_male_vs_female %>%
+  group_by(`Participant Public ID`) %>%
+  fill(all_of(new_columns_to_fill_1), .direction = "downup") %>%
+  ungroup()-> combined_tasks_male_vs_female
+ 
+ # Fill missing values in the specified columns within each participant and audio
+ combined_tasks_male_vs_female %>%
+   ungroup()%>%
+  group_by(`Participant Public ID`, Audio_Track) %>%
+  fill(all_of(new_columns_to_fill_2), .direction = "downup") %>%
+  ungroup()-> combined_tasks_male_vs_female
+ 
+ ## improve measurement? Only fill new_columns_to_fill_2 where Audio_Track is not NA
+```
+# Check duplicates combined data
+```{r male_vs_female combine data dupl}
+## Check duplicates
+combined_tasks_male_vs_female%>%
+  group_by(`Participant Public ID`, Audio_Track, Attribute) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  filter(n > 1L)-> duplicates
+
+combined_tasks_male_vs_female%>%
+  group_by (`Participant Public ID`)%>%
+  count(`Participant Public ID`)-> combined_tasks_male_vs_female_rows # normal 112 but 3 pp above 
+
+combined_tasks_male_vs_female %>%
+  group_by(`Participant Public ID`, Audio_Track, Attribute) %>%
+  mutate(Response = Response[which.max(`UTC Timestamp`)])%>%
+  select(-`UTC Timestamp`, -`UTC Date and Time`, -`Object Name`)%>%
+  distinct()->combined_tasks_male_vs_female
+
+## Check duplicates
+combined_tasks_male_vs_female%>%
+  group_by(`Participant Public ID`, Audio_Track, Attribute) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  filter(n > 1L)-> duplicates #
+
+combined_tasks_male_vs_female%>%
+  group_by (`Participant Public ID`)%>%
+  count(`Participant Public ID`)-> combined_tasks_male_vs_female_rows # all normal 112
+```
+# combine all task data
+
+```{r combine data all}
+
+bind_rows(combined_tasks_female, combined_tasks_male, combined_tasks_male_vs_female)->data_tasks
+
+data_tasks%>%
+  ungroup()%>%
+  summarise(n_distinct(`Participant Public ID`))
+
+as.factor(data_tasks$`Task Name`)->data_tasks$`Task Name`
+
+
+data_tasks%>%
+  ungroup()%>%
+ count(`Task Name`,`Speaker_Gender`,`Participant Public ID`)-> rows_per_condition
+
 ```
 # *Background Questionnaire*
 ## Prep
@@ -638,7 +804,11 @@ pp_bckgr%>%
 ## data set 2: language & poplitical background
 ```{r questionnaire2-lang_pop}
 questionnaire%>%
-  select("Participant Public ID", starts_with("languages_caregiver1"), starts_with("languages_caregiver2"), "other_languages", "own_dialect", "party", "party-text", matches("^social_desirability_[A-I]-quantised$"), matches("^populism_[A-D]$"), starts_with("political_"))-> pp_lang_pop_wide
+  select("Participant Public ID", starts_with("languages_caregiver1"), starts_with("languages_caregiver2"), "other_languages", "own_dialect", "party", "party-text", matches("^social_desirability_[A-I]-quantised$"), matches("^populism_[A-D]$"), starts_with("political_"), `UTC Timestamp`)-> pp_lang_pop_wide
+
+
+
+
 
 pp_lang_pop_wide%>%
   select( -`political_orientation_A-quantised`, -`political_orientation_B-quantised`, -`political_orientation_C-quantised`, -`political_orientation_D-quantised`, -`political_spectrum_other-quantised`)%>%
@@ -648,10 +818,24 @@ pp_lang_pop_wide%>%
 pp_lang_pop%>%
   mutate(caregiver= ifelse (str_detect(variety_numeric, "^languages_caregiver1"), "caregiver1", "caregiver2"))->pp_lang_pop
 
-## new column for text box anderer Dialekt
+## new column for text box "anderer Dialekt"
+
+as.factor(pp_lang_pop$variety_numeric)-> pp_lang_pop$variety_numeric
+
+levels(pp_lang_pop$variety_numeric)
 pp_lang_pop%>%
   mutate(Response_Text_Other_Dialect = ifelse(lang.variety == "Anderer Dialekt", lag(lang.variety), NA))%>%
+  filter(`variety_numeric` != "languages_caregiver2-text" &`variety_numeric`!= "languages_caregiver1-text" )%>%
+select(-`variety_numeric`)%>%
   ungroup()-> pp_lang_pop
+
+### duplicates for caregiver?
+pp_lang_pop %>%
+  count(`Participant Public ID`, caregiver) %>%
+  filter(n > 1)->duplicates # 4 pp
+
+pp_lang_pop%>%
+  filter (`Participant Public ID`== "281162358882340" | `Participant Public ID`== "281093395266704" | `Participant Public ID`== "281348585319612"| `Participant Public ID`== "280560572371198")-> check_dup # multiple answers for lang variety care giver same time stamp
 ```
 # Standardise open text answer caregiver language
 ```{r questionnaire2-lang_pop_standardise}
@@ -686,13 +870,16 @@ pp_lang_pop_special %>%
     `languages_caregivers-text` == "Plattdeutsch" ~ "Plattdeutsch"
     )) -> pp_lang_pop_special
 ```
-# join to questionnaire data sets: 
+# join questionnaire data sets: 
 ```{r join questionnaire data}
 pp_lang_pop%>%
 left_join (pp_bckgr, by= c("Participant Public ID" = "Participant Public ID"))-> combined_questionnaire
 
 combined_questionnaire%>%
-filter (`Participant Public ID` != "280475315358931")->combined_questionnaire
+filter (`Participant Public ID` != "280475315358931")%>%
+  select(-`Task Name`)->combined_questionnaire
+
+
 ```
 ## Summary tables for questionnaire
 ```{r summary tables}
@@ -720,7 +907,7 @@ combined_questionnaire%>%
 
 ### participant gender
 
-pp_bckgr%>%
+combined_questionnaire%>%
   group_by(gender)%>%
   summarise(n_distinct(`Participant Public ID`))->pp_gender
 
@@ -736,7 +923,7 @@ combined_questionnaire%>%
   summarise(n_distinct(`Participant Public ID`))->education
 
 ### sum_profession
-pp_bckgr%>%
+combined_questionnaire%>%
   group_by(education_profession1_sum)%>%
   summarise(n_distinct(`Participant Public ID`))->sum_profession1
 
@@ -753,11 +940,10 @@ combined_questionnaire%>%
   group_by(profession)%>%
   summarise(n_distinct(`Participant Public ID`))->sum_profession
 
-## summary tables for pp lang. & political bckgr
 
 combined_questionnaire%>%
   group_by (`Participant Public ID`)%>%
-  count(`Participant Public ID`)-> pp_lang_pop_rows # 1-7 rows per pp
+  count(`Participant Public ID`)-> combined_q_rows # 1-14 rows per pp
 # 281162358882340
 
 combined_questionnaire%>%
@@ -783,13 +969,76 @@ combined_questionnaire%>%
 combined_questionnaire%>%
   summarise(mean(own_dialect), sd (own_dialect), min (own_dialect), max(own_dialect))->own_lang.variety
 ```
-# combine questioonaire with task data
+# combine questionaire with task data
 
 ```{r question_task_combine}
 as.factor(combined_questionnaire$`Participant Public ID`)-> combined_questionnaire$`Participant Public ID`
 
-combined_tasks_male%>%
-left_join (combined_questionnaire, by= `Participant Public ID`)-> combined_data_male
+as.factor(data_tasks$`Participant Public ID`)-> data_tasks$`Participant Public ID`
+
+colnames(data_tasks)
+colnames(combined_questionnaire)
+
+# find unique compound keys
+
+data_tasks %>%
+  count(`Participant Public ID`, Audio_Track, Attribute) %>%
+  filter(n > 1) # yes, unique key
+
+combined_questionnaire %>%
+  count(`Participant Public ID`, caregiver, lang.variety) %>%
+  filter(n > 1) # yes unique key
+
+
+data_tasks %>%
+  ungroup()%>%
+  summarise(
+    na_Participant_Public_ID = sum(is.na(`Participant Public ID`)),
+    na_Audio_Track = sum(is.na(Audio_Track)),
+    na_Attribute = sum(is.na(Attribute)))->na_data_task
+
+
+combined_questionnaire %>%
+  ungroup()%>%
+  summarise(
+    na_Participant_Public_ID = sum(is.na(`Participant Public ID`)),
+    na_caregiver = sum(is.na(caregiver)),
+    na_lang.variety = sum(is.na(lang.variety)))->na_compl_questionnaire
+
+
+data_tasks%>%
+left_join (combined_questionnaire, by= "Participant Public ID")-> data_all
+
+data_all %>%
+  distinct(`Participant Public ID`, `Audio_Track`, `Attribute`, .keep_all = TRUE)-> data_better
+```
+# Final data set
+```{r check_final_data}
+
+# Check if there are any matching rows
+matching_rows <- data_tasks %>%
+  semi_join(combined_questionnaire, by = c("Participant Public ID", "Task Name"))
+
+# Display the number of matching rows
+nrow(matching_rows) # 0 rows matching
+
+unmatched_rows <- data_tasks %>%
+  anti_join(combined_questionnaire, by = c("Participant Public ID", "Task Name")) # all rows umatched
+
+# Display unmatched rows
+unmatched_rows
+
+data_better%>%
+  group_by(gender)%>%
+  summarise(n_distinct(`Participant Public ID`))->pp_gender # works
+
+data_better%>%
+  ungroup()%>%
+  summarise(mean(own_dialect), sd (own_dialect), min (own_dialect), max(own_dialect))->own_lang.variety # NAs
+
+data_better%>%
+  group_by(party)%>%
+  summarise(n_distinct(`Participant Public ID`))->sum_party # works
 
 ```
 # Final data set
