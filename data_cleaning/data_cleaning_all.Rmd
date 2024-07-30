@@ -162,7 +162,7 @@ origin_authen_male%>%
   ungroup()%>%
   filter(!(Response_corrected == "__other" & is.na(Response_Text_identity_lang.var)))%>%
   distinct(`Participant Public ID`, Audio, Target_Concept, Variety, .keep_all = TRUE)%>%
-  select(-Response, -`Object ID`,-`UTC Date and Time`, -`UTC Timestamp`)->origin_authen_male
+  select(-Response, -`Object ID`,-`UTC Date and Time`)->origin_authen_male
 ```
 # Prep origin & authenticity join
 
@@ -214,7 +214,7 @@ new_columns_to_fill_2 <- c("Response_Text_identity_lang.var",                   
  # Fill missing values in the specified columns within each participant and audio
  combined_tasks_male %>%
    ungroup()%>%
-  group_by(`Participant Public ID`, Audio_Track) %>%
+  group_by(`Participant Public ID`) %>%
   fill(all_of(new_columns_to_fill_2), .direction = "downup") %>%
   ungroup()-> combined_tasks_male
 ```
@@ -234,7 +234,7 @@ combined_tasks_male%>%
 combined_tasks_male %>%
   group_by(`Participant Public ID`, Audio_Track, Attribute) %>%
   mutate(Response = Response[which.max(`UTC Timestamp`)])%>%
-  select(-`UTC Timestamp`, -`UTC Date and Time`, -`Object Name`)%>%
+  select(-`UTC Date and Time`, -`Object Name`)%>%
   distinct()->combined_tasks_male
 
 ## Check duplicates
@@ -392,7 +392,7 @@ origin_authen_female%>%
   ungroup()%>%
   filter(!(Response_corrected == "__other" & is.na(Response_Text_identity_lang.var)))%>%
   distinct(`Participant Public ID`, Audio, Target_Concept, Variety, .keep_all = TRUE)%>%
-  select(-Response, -`Object ID`,-`UTC Date and Time`, -`UTC Timestamp`)->origin_authen_female
+  select(-Response, -`Object ID`,-`UTC Date and Time`)->origin_authen_female
 ```
 ### Prep origin & authenticity join
 
@@ -463,7 +463,7 @@ combined_tasks_female%>%
 combined_tasks_female %>%
   group_by(`Participant Public ID`, Audio_Track, Attribute) %>%
   mutate(Response = Response[which.max(`UTC Timestamp`)])%>%
-  select(-`UTC Timestamp`, -`UTC Date and Time`, -`Object Name`)%>%
+  select( -`UTC Date and Time`, -`Object Name`)%>%
   distinct()->combined_tasks_female
 
 ## Check duplicates
@@ -617,7 +617,7 @@ origin_authen_male_vs_female%>%
   ungroup()%>%
   filter(!(Response_corrected == "__other" & is.na(Response_Text_identity_lang.var)))%>%
   distinct(`Participant Public ID`, Audio, Target_Concept, Variety, .keep_all = TRUE)%>%
-  select(-Response, -`Object ID`,-`UTC Date and Time`, -`UTC Timestamp`)->origin_authen_male_vs_female
+  select(-Response, -`Object ID`,-`UTC Date and Time`)->origin_authen_male_vs_female
 ```
 # Prep origin & authenticity join
 
@@ -689,7 +689,7 @@ combined_tasks_male_vs_female%>%
 combined_tasks_male_vs_female %>%
   group_by(`Participant Public ID`, Audio_Track, Attribute) %>%
   mutate(Response = Response[which.max(`UTC Timestamp`)])%>%
-  select(-`UTC Timestamp`, -`UTC Date and Time`, -`Object Name`)%>%
+  select(-`UTC Date and Time`, -`Object Name`)%>%
   distinct()->combined_tasks_male_vs_female
 
 ## Check duplicates
@@ -808,12 +808,14 @@ questionnaire%>%
 
 
 
-
-
 pp_lang_pop_wide%>%
   select( -`political_orientation_A-quantised`, -`political_orientation_B-quantised`, -`political_orientation_C-quantised`, -`political_orientation_D-quantised`, -`political_spectrum_other-quantised`)%>%
   pivot_longer(cols = 2:45, names_to = "variety_numeric", values_to = "lang.variety")%>%
   drop_na(lang.variety)-> pp_lang_pop
+
+# pp_lang_pop%>%
+  #mutate(ingroup= case_when (variety_numeric == "languages_caregiver1-15" | variety_numeric == "languages_caregiver2-15" ~ "Swabian", variety_numeric == "languages_caregiver1-1" | variety_numeric == "languages_caregiver2-1"  "other"))-> pp_lang_pop # achieves same as below new ingroup variable no?
+
 
 pp_lang_pop%>%
   mutate(caregiver= ifelse (str_detect(variety_numeric, "^languages_caregiver1"), "caregiver1", "caregiver2"))->pp_lang_pop
@@ -837,8 +839,27 @@ pp_lang_pop %>%
 pp_lang_pop%>%
   filter (`Participant Public ID`== "281162358882340" | `Participant Public ID`== "281093395266704" | `Participant Public ID`== "281348585319612"| `Participant Public ID`== "280560572371198")-> check_dup # multiple answers for lang variety care giver same time stamp
 ```
+# New variable in-/ outgroup lang. variety
+```{r questionnaire2-lang_pop}
+as.factor(pp_lang_pop$lang.variety)->pp_lang_pop$lang.variety
+levels(pp_lang_pop$lang.variety)
+
+pp_lang_pop%>%
+  group_by(`Participant Public ID`, caregiver)%>%
+  mutate (lang.exposure = case_when(lang.variety == "Schwäbisch" ~ "in-group",
+                                    lang.variety == "Alemannisch" | lang.variety == "Anderer Dialekt"| lang.variety == "Badisch"  |  lang.variety == "Bairisch" |lang.variety ==  "Fränkisch" | lang.variety == "Hessisch" |                          lang.variety == "Moselfränkisch" | lang.variety ==  "Norddeutsch" | lang.variety == "Ostdeutsch"  |  lang.variety == "Österreichisch" | lang.variety == "Pfälzisch" |  lang.variety ==  "Plattdeutsch" | lang.variety ==  "Rheinisch" | lang.variety == "Saarländisch" |  lang.variety ==  "Sächsisch" |lang.variety == "Schweizerdeutsch" | lang.variety == "Thüringisch" ~ "out-group_dialect", 
+  lang.variety == "Dialekt/Sprache aus dem nicht-deutschsprachigen Ausland" ~ "multilingual", lang.variety == "Hochdeutsch"  ~ "Hochdeutsch", lang.variety == "Ich weiß nicht" ~ "Ich weiß nicht", 
+      FALSE ~ NA))->  pp_lang_pop   
+
+as.factor(pp_lang_pop$lang.exposure)->pp_lang_pop$lang.exposure
+pp_lang_pop%>%
+  ungroup()%>%
+  group_by(lang.exposure, caregiver)%>%
+  summarise (n_distinct(`Participant Public ID`))-> Sum_lang.expos_pp_lang_pop
+
+```
 # Standardise open text answer caregiver language
-```{r questionnaire2-lang_pop_standardise}
+```{r questionnaire3-lang_pop_standardise, eval=FALSE, include=FALSE}
 
 pp_lang_pop %>%
   mutate(Response_Text_Other_Dialect_check = ifelse(!is.na(Response_Text_Other_Dialect), str_to_lower(Response_Text_Other_Dialect), NA))-> pp_lang_pop
@@ -946,13 +967,9 @@ combined_questionnaire%>%
   count(`Participant Public ID`)-> combined_q_rows # 1-14 rows per pp
 # 281162358882340
 
-combined_questionnaire%>%
-  add_count(`Participant Public ID`)%>%
-  filter(n > 1)%>%
-  distinct()-> duplicates
 
 combined_questionnaire%>%
-  distinct_all()->combined_questionnaire
+  distinct_all()->combined_questionnaire2# same
 
 combined_questionnaire%>%
   ungroup()%>%
@@ -967,17 +984,29 @@ combined_questionnaire%>%
   summarise(n_distinct(`Participant Public ID`))->sum_lang.variety_caregiver
 
 combined_questionnaire%>%
+  group_by(caregiver, lang.variety)%>%
+  summarise(n_distinct(`Participant Public ID`))->sum_caregiver_lang
+
+combined_questionnaire%>%
   summarise(mean(own_dialect), sd (own_dialect), min (own_dialect), max(own_dialect))->own_lang.variety
 ```
 # combine questionaire with task data
 
 ```{r question_task_combine}
-as.factor(combined_questionnaire$`Participant Public ID`)-> combined_questionnaire$`Participant Public ID`
 
-as.factor(data_tasks$`Participant Public ID`)-> data_tasks$`Participant Public ID`
+# Ensure matching data types and trim whitespace
+data_tasks <- data_tasks %>%
+  mutate(`Participant Public ID` = as.character(trimws(`Participant Public ID`)))
 
-colnames(data_tasks)
-colnames(combined_questionnaire)
+combined_questionnaire <- combined_questionnaire %>%
+  mutate(`Participant Public ID` = as.character(trimws(`Participant Public ID`)))
+
+# Check for common Participant Public ID values
+common_ids <- intersect(data_tasks$`Participant Public ID`, combined_questionnaire$`Participant Public ID`)
+
+# Display the number of common IDs
+length(common_ids)
+
 
 # find unique compound keys
 
@@ -988,6 +1017,14 @@ data_tasks %>%
 combined_questionnaire %>%
   count(`Participant Public ID`, caregiver, lang.variety) %>%
   filter(n > 1) # yes unique key
+
+# create unique keys
+
+data_tasks <- data_tasks %>%
+  mutate(unique_key = paste(`Participant Public ID`, Audio_Track, Attribute, sep = "_"))
+
+combined_questionnaire <- combined_questionnaire %>%
+  mutate(unique_key = paste(`Participant Public ID`, caregiver, lang.variety, sep = "_"))
 
 
 data_tasks %>%
@@ -1005,46 +1042,71 @@ combined_questionnaire %>%
     na_caregiver = sum(is.na(caregiver)),
     na_lang.variety = sum(is.na(lang.variety)))->na_compl_questionnaire
 
+colnames(data_tasks)
+colnames(combined_questionnaire)
 
-data_tasks%>%
-left_join (combined_questionnaire, by= "Participant Public ID")-> data_all
+data_tasks %>%
+  left_join(combined_questionnaire)->data_all
 
-data_all %>%
-  distinct(`Participant Public ID`, `Audio_Track`, `Attribute`, .keep_all = TRUE)-> data_better
+# Joining with `by = join_by(`Participant Public ID`, unique_key)`
+
+
+# data_all %>%
+  #distinct(`Participant Public ID`, `Audio_Track`, `Attribute`, .keep_all = TRUE)-> data_all
 ```
 # Final data set
 ```{r check_final_data}
 
-# Check if there are any matching rows
-matching_rows <- data_tasks %>%
-  semi_join(combined_questionnaire, by = c("Participant Public ID", "Task Name"))
+colnames(data_all)
 
-# Display the number of matching rows
-nrow(matching_rows) # 0 rows matching
+# NAs
 
-unmatched_rows <- data_tasks %>%
-  anti_join(combined_questionnaire, by = c("Participant Public ID", "Task Name")) # all rows umatched
+data_all%>%
+  group_by(`Participant Public ID`) %>%
+  summarise(na_count_pop_A = sum(is.na(populism_A)), na_count_pop_B = sum(is.na(populism_B)), na_count_pop_C = sum(is.na(populism_C)), na_count_pop_D = sum(is.na(populism_D)))->NA_pop
 
-# Display unmatched rows
-unmatched_rows
+data_all%>%
+  group_by(`Participant Public ID`) %>%
+  summarise(na_count_caregiver = sum(is.na(caregiver)), na_count_lang.var = sum(is.na(lang.variety)), na_count_own_dialect = sum(is.na(own_dialect)), na_count_party= sum(is.na(party)))->NA_quest
 
-data_better%>%
+# incomplete data
+
+# levels complete of questionnaire
+
+as.factor(data_all$caregiver)-> data_all$caregiver
+data_all%>%
+  group_by(`Participant Public ID`) %>%
+  summarise(caretaker_levels = unique(data_all$caregiver))-> caretaker_levels 
+
+data_all%>%
+  group_by(caregiver, lang.variety)%>%
+  summarise(n_distinct(`Participant Public ID`))->sum_caregiver_lang
+
+# caregiver data missing -> NAs
+
+data_all%>%
+  group_by(`Task Name`, `Participant Public ID`)%>%
+  count()-> pp_rows # works 112 for male vs female 168 for only condition
+
+
+data_all%>%
   group_by(gender)%>%
-  summarise(n_distinct(`Participant Public ID`))->pp_gender # works
+  summarise(n_distinct(`Participant Public ID`))->pp_gender
 
-data_better%>%
+data_all%>%
   ungroup()%>%
-  summarise(mean(own_dialect), sd (own_dialect), min (own_dialect), max(own_dialect))->own_lang.variety # NAs
+    drop_na(own_dialect)%>%
+  summarise(mean(own_dialect), sd (own_dialect), min (own_dialect), max(own_dialect))->own_lang.variety 
 
-data_better%>%
+data_all%>%
   group_by(party)%>%
-  summarise(n_distinct(`Participant Public ID`))->sum_party # works
+  summarise(n_distinct(`Participant Public ID`))->sum_party
 
 ```
 # Final data set
 
 ```{r write csv final data}
 
-#write_delim(questionnaire_final, here("data_processed", "data_clean.csv"), col_names = TRUE, delim = ",")
+write_delim(data_all, here("data_processed", "data_clean.csv"), col_names = TRUE, delim = ",")
 ```
 
