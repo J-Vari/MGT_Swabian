@@ -715,6 +715,13 @@ data_tasks%>%
   ungroup()%>%
  count(`Task Name`,`Speaker_Gender`,`Participant Public ID`)-> rows_per_condition
 
+## delete Attributes for attention ceck (numbers)
+as.factor(data_tasks$Attribute)->data_tasks$Attribute
+
+data_tasks%>%
+  filter (Attribute != "eins" & Attribute != "zwei" &   Attribute != "drei"&  Attribute != "vier" & Attribute != "fünf" & Attribute != "sechs" & Attribute != "sieben" )->data_tasks
+
+
 ```
 # *Background Questionnaire*
 ## Prep
@@ -1048,6 +1055,20 @@ data_all%>%
 data_all%>%
   ungroup()%>%
   summarise(n_distinct(`Participant Public ID`))#1313
+```
+# more practical level & variable names
+
+```{r rename_final_data}
+
+rename(data_all, condition = `Task Name.x`)-> data_all
+rename(data_all, bilendi_id = `Participant Public ID`)-> data_all
+
+as.factor(data_all$condition)->data_all$condition
+
+data_all%>%
+  mutate(condition_test = ifelse(condition == "Audio evaluation male vs. female", "contrasted_gender", "single_gender"))->data_all
+         
+
 
 ```
 # Write Final data set
