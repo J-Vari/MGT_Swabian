@@ -1,0 +1,385 @@
+---
+title: "Data_Analyses_MGT_Swabian_single_gender"
+author: "Judit Vari"
+date: "30 7 2024"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library (dplyr)
+library(broom)
+library(tidyverse)
+library(corrr)
+library(ggcorrplot)
+library(car)
+library(readr)
+library(here)
+library(ordinal)
+library(lmerTest)
+library(emmeans)
+library(sjPlot)
+library(report)
+library (afex)
+library(lme4)
+library(optimx)
+library(sjPlot)
+library(ggeffects)
+library(factoextra)
+library(FactoMineR)
+```
+### Read data & assign classes
+
+```{r setup1, include=FALSE}
+result <- read_delim(here("data_processed", "data_clean.csv"), col_names = TRUE, delim = ",")
+colnames(result)
+
+
+
+as.factor(result$bilendi_id)->result$bilendi_id
+
+as.factor(result$lang.exposure)->result$lang.exposure
+as.factor(result$Audio_Track)->result$Audio_Track
+as.factor(result$condition)->result$condition
+as.factor(result$Speaker)->result$Speaker
+as.factor(result$Speaker_Gender)->result$Speaker_Gender
+as.factor(result$Attribute)->result$Attribute
+as.factor(result$deceived)->result$deceived
+as.factor(result$`Political level`)-> result$`Political level`
+as.factor(result$Audio_Track_origin_non_st)->result$Audio_Track_origin_non_st
+as.factor(result$Audio_Track_origin_st)->result$Audio_Track_origin_st
+as.factor(result$Statement_no)-> result$Statement_no
+as.factor(result$`identity_lang.variety_non-st`)-> result$`identity_lang.variety_non-st`
+as.factor(result$identity_lang.variety_st)-> result$identity_lang.variety_st
+as.factor(result$gender)->result$gender
+as.factor(result$state_of_residence)->result$state_of_residence
+as.factor(result$party)->result$party
+as.factor(result$education_school)->result$education_school
+as.factor(result$education_profession1)->result$education_profession1
+as.factor(result$income)->result$income
+as.factor(result$profession)->result$profession
+as.factor(result$education_profession1_sum)->result$education_profession1_sum
+as.factor(result$education_school_sum)-> result$education_school_sum
+as.factor(result$lang.exposure)->result$lang.exposure
+as.factor(result$Lang.Variety_Audio)->result$Lang.Variety_Audio
+
+
+
+
+as.numeric(result$Response)->result$Response
+as.numeric(result$Att.check_acc)->result$Att.check_acc
+as.numeric(result$age)->result$age
+as.numeric(result$`proximity_variety_non-st`)->result$`proximity_variety_non-st`
+as.numeric(result$proximity_variety_st)->result$proximity_variety_st
+as.numeric(result$political_orientation_A)->result$political_orientation_A
+as.numeric(result$political_orientation_B)->result$political_orientation_B
+as.numeric(result$political_orientation_C)->result$political_orientation_C
+as.numeric(result$political_orientation_D)->result$political_orientation_D
+as.numeric(result$own_dialect)-> result$own_dialect
+as.numeric(result$`social_desirability_A-quantised`)-> result$`social_desirability_A-quantised`
+as.numeric(result$`social_desirability_B-quantised`)-> result$`social_desirability_B-quantised`
+as.numeric(result$`social_desirability_C-quantised`)-> result$`social_desirability_C-quantised`
+as.numeric(result$`social_desirability_D-quantised`)-> result$`social_desirability_D-quantised`
+as.numeric(result$`social_desirability_E-quantised`)-> result$`social_desirability_E-quantised`
+as.numeric(result$`social_desirability_F-quantised`)-> result$`social_desirability_F-quantised`
+as.numeric(result$`social_desirability_G-quantised`)-> result$`social_desirability_G-quantised`
+as.numeric(result$`social_desirability_H-quantised`)-> result$`social_desirability_H-quantised`
+as.numeric(result$`social_desirability_I-quantised`)-> result$`social_desirability_I-quantised`
+as.numeric(result$populism_A)-> result$populism_A
+as.numeric(result$populism_B)-> result$populism_B
+as.numeric(result$populism_C)-> result$populism_C
+as.numeric(result$populism_D)-> result$populism_D
+as.numeric(result$political_spectrum)-> result$political_spectrum
+
+
+```
+# scale variables
+
+```{r setup2, include=FALSE}
+scale (result$Response)->result$Response
+scale(result$political_spectrum)-> result$political_spectrum
+scale(result$age)->result$age
+scale(result$own_dialect)->result$own_dialect
+
+```
+# exclude participants failing attention checks
+
+```{r setup3, include=FALSE}
+
+result%>%
+  ggplot(aes(x=Att.check_acc)) +
+  ggtitle ("Plot of Attention Check")+
+  xlab("accuracy attention check")+
+         geom_density()-> plot_attention
+
+result%>%
+  filter(Att.check_acc > 85)%>%
+  summarise(n_distinct(bilendi_id))-> pp_above_85atten
+
+result%>%
+  filter(Att.check_acc > 85)->result
+
+result%>%
+  ggplot(aes(x=Att.check_acc)) +
+  ggtitle ("Plot of Attention Check")+
+  xlab("accuracy attention check")+
+         geom_density()-> plot_attention
+
+plot_attention
+
+```
+## Create subsets 
+
+### in- and outgroup 
+Separate ingroup from outgroup based on exposure to Swabian, outgroup consists of other non-standard, vernacular speakers, standard speakers and bilinguals
+Continue with analyses of outgroup data set
+
+### subdived outgroup into two conditions: participants either exposed to only one gender (male or female speaker) or two genders (male vs. female speakers)
+
+```{r setup2, include=FALSE}
+
+
+result%>%
+  filter(lang.exposure != "in-group")-> outgroup
+
+result%>%
+  filter(lang.exposure == "in-group")-> ingroup
+
+# check groups
+
+outgroup%>%
+  group_by(lang.exposure)%>%
+  summarise(n_distinct(bilendi_id))->lang.ex_out
+
+ingroup%>%
+   group_by(lang.exposure)%>%
+  summarise(n_distinct(bilendi_id))->lang.ex_in
+
+levels(outgroup$condition)
+outgroup%>%
+  filter (condition== "single_gender")->outgroup_sing
+
+outgroup%>%
+  filter (condition== "contrasted_gender")->outgroup_contrast
+
+```
+## Plots raw data
+plot responses attributes
+```{r plot responses attributes}
+
+# Charisma
+outgroup_sing%>%
+  filter (Attribute == "charismatisch")%>%
+ggplot(aes(x=Response)) +
+  ggtitle ("Plot of Attribute Charisma")+
+  xlab("ratings")+
+         geom_density()-> plot_charisma
+
+plot_charisma
+
+
+outgroup_sing%>%
+  drop_na(Lang.Variety_Audio)%>%
+filter (Attribute == "charismatisch")%>%
+ggplot(aes(y=Response, x=Lang.Variety_Audio))+
+geom_boxplot()+
+  ggtitle ("Plot of Attribute Charisma")
+
+## all attributes
+
+outgroup_sing%>%
+  drop_na(Lang.Variety_Audio)%>%
+ggplot(aes(y=Response, x=Attribute))+
+geom_boxplot()+
+  ggtitle ("Plot of all Attributes")
+
+```
+
+## Prep political background  
+####PCA
+
+```{r PCA_populism, echo=FALSE}
+outgroup_sing%>%
+  ungroup()%>%
+  select(bilendi_id, populism_A, populism_B, populism_C, populism_D)-> PCA_pop_data
+
+
+distinct (PCA_pop_data)-> PCA_pop_data 
+pca_pop <- PCA(PCA_pop_data [, 2:5], scale.unit =TRUE, graph = TRUE) # option to include quali & quanti variables
+
+
+fviz_eig(pca_pop) # scree plot variance explained dimensions, keep 2
+
+pca_pop$var$coord
+
+pca_pop <- PCA(PCA_pop_data [, 2:5], scale.unit =TRUE,
+               graph = T, ncp = 2)
+
+summary(pca_pop)
+
+dimdesc(pca_pop, axes = c(1,2))
+
+
+
+p_1a <- fviz_pca_var(pca_pop,geom = c("point","text"),
+                  label = "var",
+                  repel = TRUE,
+                  col.var = "contrib",   # colour active variables according to their contribution to PCA axes
+                  gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+                  title= "PCA populism"
+)
+
+p_1a 
+
+#ggsave(here("Output", "outgroup_PCA_populism.jpg"))
+```
+*dimension reduction populism scales 1-4 after PCA*
+```{r PCA_dim_reduction_populism, echo=FALSE}
+
+
+populism_dim <- pca_pop$ind$coord [,1]
+
+as_tibble(populism_dim)->populism_dim
+
+bind_cols(PCA_pop_data, populism_dim)->PCA_pop_data_final
+
+left_join (outgroup_sing, PCA_pop_data_final, by = c("bilendi_id", "populism_A", "populism_B", "populism_C", "populism_D"))-> outgroup_sing # 
+  
+rename (outgroup_sing, populism_dim = value)-> outgroup_sing
+```
+*final dummy variables populism*
+create 2 dummy variables for populism a) mean of populism scores items A-C, but exclude pop D -> PCA shows very different b) use principal component 1 as dummy
+```{r poplitical bckgr pop_dummies, echo=FALSE}
+outgroup_sing %>%
+  mutate(populism_all = rowMeans(across(c(populism_A, populism_B, populism_C), as.numeric, .names = "mean_{col}"), na.rm = TRUE)) -> outgroup_sing
+
+
+outgroup_sing%>%
+  distinct(bilendi_id, populism_all)%>%
+ggplot(aes(x=populism_all))+
+  ggtitle("Plot of Populism Mean Scores") +
+         geom_density()+
+  ylab("no. of participants")+
+  xlab("total score of populism items 1-3")-> Plot_sum_pop1
+Plot_sum_pop1
+#ggsave(here("Output", "Plot_sum_pop1.jpg"))
+
+
+# add new populism dimension 1 of PCA
+as.numeric(outgroup_sing$populism_dim)-> outgroup_sing$populism_dim
+
+populism_dim%>%
+   ggplot(aes(x=value))+
+     ggtitle("Plot of Populism Dimension") +
+     geom_density()+
+  xlab ("Populism Prinincipal Component Scores")-> Plot_sum_pop2
+Plot_sum_pop2
+
+```
+
+# Plot polit. backgr
+
+```{r political_bckgr}
+
+
+outgroup_sing%>%
+  ggplot(aes(x=political_spectrum))+
+  ggtitle("Plot of Political Spectrum") +
+         geom_density()+
+  ylab("no. of participants")+
+  xlab("from left to right")-> Plot_polt.spec
+Plot_polt.spec
+
+
+```
+
+# RQ 1: Does language variety affect perceived charisma and other traits?
+```{r lang.var}
+outgroup_sing%>%
+  ungroup()%>%
+  select(bilendi_id, Response, Attribute, Audio_Track, age, political_spectrum, populism_A, populism_B, populism_C, populism_D, populism_all, own_dialect)-> nummeric
+
+distinct(nummeric)->nummeric
+
+nummeric%>%
+  pivot_wider(names_from = Attribute, values_from = Response, id_cols = c("bilendi_id", "Audio_Track", "age", "political_spectrum", "populism_all", "own_dialect"))-> nummeric_long
+
+nummeric_long%>%
+distinct()%>%
+  select(-bilendi_id, -Audio_Track)%>%
+  drop_na()->nummeric_long
+
+nummeric_long %>%
+mutate(across(5:10, as.numeric))-> nummeric_long
+
+cor(nummeric_long)->matrix_num_long
+
+matrix_num_long
+# Visualize correlations
+
+
+ggcorrplot(matrix_num_long, 
+           title = "Nummeric variables", hc.order = TRUE, 
+           type = "lower",lab = TRUE, lab_size = 2.5,  insig = "blank")->plot_corr_matrix
+plot_corr_matrix
+
+#ggsave(here ("output", "plot_corr_matrix.jpg"))
+```
+## Impact language variety main + interaction gender
+RQ: Do participants rate speakers of standard language variety more charismatic ompared the vernacular variety?
+RQ 2: Does gender moderate an effect of lang. variety?
+
+```{r glm_lang.var_chari, eval=FALSE, include=FALSE}
+
+
+
+# only charisma ratings
+outgroup_sing%>%
+  filter(Attribute=="charismatisch")->outgroup_sing_chari
+
+outgroup_sing_chari$Lang.Variety_Audio = relevel(outgroup_sing_chari$Lang.Variety_Audio, ref = "Regional Variety")
+
+outgroup_sing_chari$gender = relevel(outgroup_sing_chari$gender, ref = "Weiblich")
+as.factor(outgroup_sing_chari$bilendi_id)-> outgroup_sing_chari$bilendi_id
+
+colnames(outgroup_sing_chari)
+
+# lmer (Response ~ Lang.Variety_Audio*Speaker_Gender + gender + age + education_school_sum + Polit_ori + (Lang.Variety_Audio*Speaker_Gender|bilendi_id) +  (1|Audio_Track) + (1|Statement_no), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a # no convergence
+
+
+#lmer (Response ~ Lang.Variety_Audio*Speaker_Gender + gender + age + education_school_sum + Polit_ori + (Lang.Variety_Audio+Speaker_Gender|bilendi_id) +  (1|Audio_Track) + (Lang.Variety_Audio|Statement_no), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a # no convergence
+
+# lmer (Response ~ Lang.Variety_Audio*Speaker_Gender + gender + age + education_school_sum + Polit_ori + (Speaker_Gender|bilendi_id) +  (1|Audio_Track) + (Lang.Variety_Audio|Statement_no), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a # no convergence
+
+
+ #lmer (Response ~ Lang.Variety_Audio*Speaker_Gender + gender + age + education_school_sum + Polit_ori + (Speaker_Gender|bilendi_id) +  (1|Audio_Track) + (1|Statement_no), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a # no convergence
+
+
+lmer (Response ~ Lang.Variety_Audio*Speaker_Gender + gender + age + education_school_sum + political_spectr +  Statement_no + (1|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a # no convergence
+
+summary(model1a)
+
+anova(model1a)
+
+
+
+plot_model(model1a, title = "Predicted values of charisma ratings", type = "pred", terms = c("Lang.Variety_Audio", "Speaker_Gender")) +
+  ylab ("Charisma ratings")+
+     labs(colour= str_wrap("Speaker Gender", width = 15))->plot_model1a
+plot_model1a
+
+```
+
+
+```{r lang.gender}
+```
+
+# RQ 3: Does pop. attitude moderate an effect of lang. variety?
+```{r lang.pop}
+```
+# RQ 4: Does political statment moderate an effect of lang. variety?
+```{r lang.pol_stat}
+
+```
+
+```{r lang.pop}
+```
