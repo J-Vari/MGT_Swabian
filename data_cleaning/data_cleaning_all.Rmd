@@ -819,7 +819,7 @@ filter (`Participant Public ID` != "280475315358931")->data_wide # discard Test 
 # turn wide into long and create new sum-up lang.variety variable
 
 data_wide%>%
-  pivot_longer(cols = 41:83, names_to = "variety_numeric", values_to = "lang.variety")%>%
+  pivot_longer(cols = 41:84, names_to = "variety_numeric", values_to = "lang.variety")%>%
   drop_na(lang.variety)%>%
   distinct()->data_long
 
@@ -923,41 +923,11 @@ data_all%>%
 as.factor(data_all$lang.exposure)->data_all$lang.exposure
 levels(data_all$lang.exposure)
 
-data_test%>%
+data_all%>%
   select(-Response_Text_Other_Dialect)%>%
   distinct()->data_all
 
-
 ```
-
-
-```{r questionnaire2-lang_pop, eval=FALSE, include=FALSE}
-
-## attempt to create freq table failed
-
-
-##frequ lang.table separate
-data_wide%>%
-  select(`Participant Public ID`, 41:83)->lang.
-
-lang.%>%
-  rowwise()%>%
-  summarise(frequency = n(), .groups = 'drop')->freq
-  
-group_by(`Participant Public ID`, `variety_numeric`, `lang.variety`) %>%
-  summarise(frequency = n(), .groups = 'drop')->freq
-
-## chat GPT frequency approach
-
-# Calculate frequency of each unique language value for each participant
- data_long %>%
-  group_by(`Participant Public ID`, `variety_numeric`, `lang.variety`) %>%rowwise()%>%
-  summarise(frequency = n(), .groups = 'drop')->freq
-
-
-
-```
-
 # Final data set
 ```{r check_final_data}
 colnames(data_all)
@@ -970,7 +940,7 @@ data_all%>%
 
 data_all%>%
   group_by(`Participant Public ID`) %>%
-  summarise(na_count_lang.expo = sum(is.na(lang.exposure_test)), na_count_own_dialect = sum(is.na(own_dialect)), na_count_party= sum(is.na(party)))->NA_quest
+  summarise(na_count_lang.expo = sum(is.na(lang.exposure)), na_count_own_dialect = sum(is.na(own_dialect)), na_count_party= sum(is.na(party)))->NA_quest
 
 
 # levels complete of questionnaire
@@ -981,7 +951,7 @@ data_all%>%
 
 data_all%>%
   filter(`Participant Public ID`== "281348585493685")%>%
-  select(`Participant Public ID`, Audio_Track, Attribute, Response, gender, age, party, `UTC Timestamp.y`, lang.exposure_test)->pp_check
+  select(`Participant Public ID`, Audio_Track, Attribute, Response, gender, age, party, `UTC Timestamp.y`, lang.exposure)->pp_check
 
 levels(pp_check$lang.exposure)
 
