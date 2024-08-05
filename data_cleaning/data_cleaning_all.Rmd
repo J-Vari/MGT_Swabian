@@ -1066,7 +1066,7 @@ rename(data_all, bilendi_id = `Participant Public ID`)-> data_all
 as.factor(data_all$condition)->data_all$condition
 
 data_all%>%
-  mutate(condition_test = ifelse(condition == "Audio evaluation male vs. female", "contrasted_gender", "single_gender"))->data_all
+  mutate(condition = ifelse(condition == "Audio evaluation male vs. female", "contrasted_gender", "single_gender"))->data_all
          
 
 
