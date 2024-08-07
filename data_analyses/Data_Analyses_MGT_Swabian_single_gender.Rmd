@@ -36,7 +36,6 @@ colnames(result)
 
 
 as.factor(result$bilendi_id)->result$bilendi_id
-
 as.factor(result$lang.exposure)->result$lang.exposure
 as.factor(result$Audio_Track)->result$Audio_Track
 as.factor(result$condition)->result$condition
@@ -89,8 +88,6 @@ as.numeric(result$populism_B)-> result$populism_B
 as.numeric(result$populism_C)-> result$populism_C
 as.numeric(result$populism_D)-> result$populism_D
 as.numeric(result$political_spectrum)-> result$political_spectrum
-
-
 ```
 # scale variables
 
@@ -245,12 +242,21 @@ bind_cols(PCA_pop_data, populism_dim)->PCA_pop_data_final
 left_join (outgroup_sing, PCA_pop_data_final, by = c("bilendi_id", "populism_A", "populism_B", "populism_C", "populism_D"))-> outgroup_sing # 
   
 rename (outgroup_sing, populism_dim = value)-> outgroup_sing
+
+
+# scale
+
+scale (outgroup_sing$populism_dim)-> outgroup_sing$populism_dim
 ```
 *final dummy variables populism*
 create 2 dummy variables for populism a) mean of populism scores items A-C, but exclude pop D -> PCA shows very different b) use principal component 1 as dummy
 ```{r poplitical bckgr pop_dummies, echo=FALSE}
 outgroup_sing %>%
   mutate(populism_all = rowMeans(across(c(populism_A, populism_B, populism_C), as.numeric, .names = "mean_{col}"), na.rm = TRUE)) -> outgroup_sing
+
+# scale
+
+scale (outgroup_sing$populism_all)-> outgroup_sing$populism_all
 
 
 outgroup_sing%>%
@@ -292,11 +298,11 @@ Plot_polt.spec
 
 ```
 
-# RQ 1: Does language variety affect perceived charisma and other traits?
-```{r lang.var}
+# Overview correlations nummeric variables partcipant background & Attributes
+```{r corr matrix}
 outgroup_sing%>%
   ungroup()%>%
-  select(bilendi_id, Response, Attribute, Audio_Track, age, political_spectrum, populism_A, populism_B, populism_C, populism_D, populism_all, own_dialect)-> nummeric
+  select(bilendi_id, Response, Attribute, Audio_Track, age, political_spectrum, populism_A, populism_B, populism_C, populism_D, populism_all, own_dialect, populism_dim)-> nummeric
 
 distinct(nummeric)->nummeric
 
@@ -319,62 +325,214 @@ matrix_num_long
 
 ggcorrplot(matrix_num_long, 
            title = "Nummeric variables", hc.order = TRUE, 
-           type = "lower",lab = TRUE, lab_size = 2.5,  insig = "blank")->plot_corr_matrix
+           type = "lower",lab = TRUE, lab_size = 2,  insig = "blank")->plot_corr_matrix
 plot_corr_matrix
 
 #ggsave(here ("output", "plot_corr_matrix.jpg"))
 ```
-## Impact language variety main + interaction gender
-RQ: Do participants rate speakers of standard language variety more charismatic ompared the vernacular variety?
-RQ 2: Does gender moderate an effect of lang. variety?
+# Impact language variety main 
+## RQ1: Do outgroup participants rate speakers of standard language variety more charismatic compared the vernacular variety?
+
+Yes: effect of lang.variety on charisma ratings
+
+Effect moderated by own dialect usage: the more dialect usage the less positive Standard German compared to vernacular, but still more positive
+
+But effect not moderated by language exposure
+
 
 ```{r glm_lang.var_chari, eval=FALSE, include=FALSE}
-
 
 
 # only charisma ratings
 outgroup_sing%>%
   filter(Attribute=="charismatisch")->outgroup_sing_chari
 
+
 outgroup_sing_chari$Lang.Variety_Audio = relevel(outgroup_sing_chari$Lang.Variety_Audio, ref = "Regional Variety")
 
+# variable own dialect
+
+lmer (Response ~ Lang.Variety_Audio*own_dialect + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1_lang.var
+summary(model1_lang.var)
+anova(model1_lang.var)
+
+
+# variable language exposure
+
+outgroup_sing_chari$lang.exposure = relevel(outgroup_sing_chari$lang.exposure, ref = "standard_variety ")
+
+
+lmer (Response ~ Lang.Variety_Audio*lang.exposure + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2_lang.var
+summary(model2_lang.var)
+anova(model2_lang.var)
+
+# Plots
+
+plot_model(model1_lang.var, title = "Predicted values of charisma ratings", type = "pred", terms = c("own_dialect", "Lang.Variety_Audio"), show.ci = T)+
+             ylab ("Charisma ratings")->plot_model1_lang.var
+   
+plot_model1_lang.var
+
+```
+
+# Moderation Gender
+## RQ 2: Does gender moderate an effect of lang. variety?
+
+No:  no effects of gender (pp or speaker) in interaction with lang. variety and no main effects of gender
+
+BUT:  Lang.Variety_Audio X pp gender approaching. sign. p= 0.06960
+
+and: gender X own_dialect sign.  men are more likely to be dialect speakers and to evaluate speakers more positively in general compared to women
+
+
+
+```{r glm_lang.var_chari_gender, eval=FALSE, include=FALSE}
+# only charisma ratings
+outgroup_sing%>%
+  filter(Attribute=="charismatisch")->outgroup_sing_chari
+
+
+outgroup_sing_chari$Lang.Variety_Audio = relevel(outgroup_sing_chari$Lang.Variety_Audio, ref = "Regional Variety")
+
+
+outgroup_sing_chari%>%
+  filter(gender != "Divers")->outgroup_sing_chari
 outgroup_sing_chari$gender = relevel(outgroup_sing_chari$gender, ref = "Weiblich")
-as.factor(outgroup_sing_chari$bilendi_id)-> outgroup_sing_chari$bilendi_id
-
-colnames(outgroup_sing_chari)
-
-# lmer (Response ~ Lang.Variety_Audio*Speaker_Gender + gender + age + education_school_sum + Polit_ori + (Lang.Variety_Audio*Speaker_Gender|bilendi_id) +  (1|Audio_Track) + (1|Statement_no), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a # no convergence
 
 
-#lmer (Response ~ Lang.Variety_Audio*Speaker_Gender + gender + age + education_school_sum + Polit_ori + (Lang.Variety_Audio+Speaker_Gender|bilendi_id) +  (1|Audio_Track) + (Lang.Variety_Audio|Statement_no), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a # no convergence
 
-# lmer (Response ~ Lang.Variety_Audio*Speaker_Gender + gender + age + education_school_sum + Polit_ori + (Speaker_Gender|bilendi_id) +  (1|Audio_Track) + (Lang.Variety_Audio|Statement_no), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a # no convergence
+# lmer (Response ~ Lang.Variety_Audio*Speaker_Gender*gender + Statement_no + Polit_ori +  own_dialect + (Lang.Variety_Audio*Speaker_Gender|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a # no convergence
 
+#lmer (Response ~ Lang.Variety_Audio*Speaker_Gender*gender + Statement_no + Polit_ori +  own_dialect + (Lang.Variety_Audio+Speaker_Gender|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a # no convergence
 
- #lmer (Response ~ Lang.Variety_Audio*Speaker_Gender + gender + age + education_school_sum + Polit_ori + (Speaker_Gender|bilendi_id) +  (1|Audio_Track) + (1|Statement_no), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a # no convergence
-
-
-lmer (Response ~ Lang.Variety_Audio*Speaker_Gender + gender + age + education_school_sum + political_spectr +  Statement_no + (1|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a # no convergence
-
+# max model: 4 way interaction
+lmer (Response ~ Lang.Variety_Audio*Speaker_Gender*gender*own_dialect + Statement_no + Speaker +  + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a
 summary(model1a)
+anova(model1a)
+vcov(model1a)
 
+# only 3 way interaction
+
+lmer (Response ~ Lang.Variety_Audio*Speaker_Gender*gender + own_dialect + Statement_no + Speaker +  + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a
+summary(model1a)
 anova(model1a)
 
 
+lmer (Response ~ Lang.Variety_Audio*Speaker_Gender*own_dialect  + Statement_no + Speaker +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1b
+summary(model1b)
+anova(model1b)
 
-plot_model(model1a, title = "Predicted values of charisma ratings", type = "pred", terms = c("Lang.Variety_Audio", "Speaker_Gender")) +
-  ylab ("Charisma ratings")+
-     labs(colour= str_wrap("Speaker Gender", width = 15))->plot_model1a
+
+lmer (Response ~ Lang.Variety_Audio*gender*own_dialect  + Statement_no + Speaker +  + Speaker_Gender +(Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1c
+summary(model1c)
+anova(model1c)
+
+
+
+plot_model(model1a, title = "Predicted values of charisma ratings", type = "pred", terms = c("Lang.Variety_Audio", "Speaker_Gender", "gender"), show.ci = T)+
+             ylab ("Charisma ratings")+
+    labs(colour= str_wrap("Speaker Gender", width = 15),  subtitle = "Participant Gender")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))->plot_model1a
+   
 plot_model1a
 
+# Only 2 way interactions
+
+# lang. variety x speaker gender
+
+
+lmer (Response ~ Lang.Variety_Audio*Speaker_Gender  + Statement_no + Speaker + own_dialect + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2b
+summary(model2b)
+anova(model2b)
+
+
+
+# lang. variety x pp gender
+
+lmer (Response ~ Lang.Variety_Audio*gender  + Statement_no + Speaker + Speaker_Gender+ own_dialect +(Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2c
+summary(model2c)
+anova(model2c)
+
+
+# speaker gender x pp gender
+
+lmer (Response ~ Speaker_Gender*gender  + Statement_no + Speaker + Lang.Variety_Audio +own_dialect+ (Speaker_Gender|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2d
+summary(model2d)
+anova(model2d)
+
+
+# Plot
+
+plot_model(model1c, title = "Predicted values of charisma ratings", type = "pred", 
+                           terms = c("own_dialect", "gender"), show.ci = TRUE) +
+                ylab("Charisma ratings") +
+                labs(colour = str_wrap("Participant gender", width = 15)) +
+                theme(axis.text.x = element_text(angle = 45, hjust = 1))-> plot_model1c
+
+plot_model1c
+
+plot_model(model1b, title = "Predicted values of charisma ratings", type = "pred", terms = c("own_dialect", "Lang.Variety_Audio", "Speaker_Gender"), show.ci = T)+
+             ylab ("Charisma ratings")+
+    labs(colour= str_wrap("Speaker Gender", width = 15))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))->plot_model1b
+   
+plot_model1b
+
 ```
+# RQ 2: Does pop. attitude moderate an effect of lang. variety?
+
+main effect of populism. the more populist attitudes the more pos. rating of speakers in general
+
+interaction between lang. variety and populism dimension: small effect: stronger preference of standard over regional for high populist individuals compared to low populist individuals
+
+interaction stimuli political orientation & pop. attitude pp -> the more populist attitudes the more positive ratings of statements with right orientation
+
+```{r lang_var & pop}
+
+## Populism measure means of 3 different scales
+
+lmer (Response ~ Lang.Variety_Audio*populism_all*own_dialect + gender + age + education_school_sum + political_spectrum + Polit_ori +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1poli 
+summary(model1poli)
+anova(model1poli)
+
+## Populism measure dimension reduction
+
+outgroup_sing_chari$Lang.Variety_Audio = relevel(outgroup_sing_chari$Lang.Variety_Audio, ref = "Regional Variety")
+
+# slope of Lang.Variety = Regional #1.340e-01
+lmer (Response ~ Lang.Variety_Audio*populism_dim*own_dialect + gender + age + education_school_sum + political_spectrum + Polit_ori +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2polia 
+summary(model2polia)
+
+# slope of populism for level Lang.Variety = Standard #  1.549e-01
+outgroup_sing_chari$Lang.Variety_Audio = relevel(outgroup_sing_chari$Lang.Variety_Audio, ref = "Standard German")
+
+lmer (Response ~ Lang.Variety_Audio*populism_dim*own_dialect + gender + age + education_school_sum + political_spectrum + Polit_ori +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2polib
+summary(model2polib)
+anova(model2polib)
+
+plot_model(model2polib, title = "Predicted values of charisma ratings", type = "pred", terms= c("own_dialect",  "Lang.Variety_Audio",  "populism_dim"), show.ci = T)+
+             ylab ("Charisma ratings")->plot_model2polib
+   
+plot_model2polib
+
+## interaction stimuli political orientation & pop. attitude pp
+
+lmer (Response ~ Lang.Variety_Audio*populism_dim*Polit_ori  + gender + age + education_school_sum + political_spectrum +(Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model3poli 
+summary(model3poli)
+anova(model3poli)
+
+plot_model(model3poli, title = "Predicted values of charisma ratings", type = "pred", terms= c("populism_dim", "Polit_ori"), show.ci = T)+
+             ylab ("Charisma ratings")->plot_model3poli
+   
+plot_model3poli
+
+# populism & gender
+
+lmer (Response ~ Lang.Variety_Audio*populism_dim*gender + age + education_school_sum + own_dialect + political_spectrum + Polit_ori +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1polid
+summary(model1polid)
+anova(model1polid)
 
 
-```{r lang.gender}
-```
-
-# RQ 3: Does pop. attitude moderate an effect of lang. variety?
-```{r lang.pop}
 ```
 # RQ 4: Does political statment moderate an effect of lang. variety?
 ```{r lang.pol_stat}
