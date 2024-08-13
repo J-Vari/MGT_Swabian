@@ -102,13 +102,11 @@ scale(results$own_dialect)->results$own_dialect
 scale(results$age)->results$age
 
 ```
-## Create subsets 
+## Create subsets 1
 
-### subdived outgroup into two conditions: participants either exposed to only one gender (male or female speaker) or two genders (male vs. female speakers)
+### subdived data into two conditions: single gender or contrasted gender
+participants either exposed to only one gender (male or female speaker) or two genders (male vs. female speakers)
 
-### in- and outgroup 
-Separate ingroup from outgroup based on exposure to Swabian, outgroup consists of other non-standard, vernacular speakers, standard speakers and bilinguals
-Continue with analyses of outgroup data set
 ```{r setup2, include=FALSE}
 
 results%>%
@@ -117,22 +115,45 @@ results%>%
 results%>%
   filter (condition== "contrasted_gender")->data_all_contrast
 
-results%>%
+```
+
+# exclude participants failing attention checks
+
+```{r setup3, include=FALSE}
+data_all_contrast%>%
+  ggplot(aes(x=Att.check_acc)) +
+  ggtitle ("Plot of Attention Check")+
+  xlab("accuracy attention check")+
+         geom_density()-> plot_attention
+
+data_all_sing%>%
+  filter(Att.check_acc > 85)%>%
+  summarise(n_distinct(bilendi_id))-> pp_above_85atten
+
+data_all_sing%>%
+  filter(Att.check_acc > 85)->data_all_sing
+
+data_all_sing%>%
+  ggplot(aes(x=Att.check_acc)) +
+  ggtitle ("Plot of Attention Check")+
+  xlab("accuracy attention check")+
+         geom_density()-> plot_attention
+
+plot_attention
+```
+## Create subsets 2
+
+### in- and outgroup 
+Separate ingroup from outgroup based on exposure to Swabian, outgroup consists of other non-standard, vernacular speakers, standard speakers and bilinguals
+Continue with analyses of outgroup data set
+
+```{r setup4, include=FALSE}
+
+data_all_sing%>%
   filter(lang.exposure != "in-group")-> outgroup
 
 data_all_sing%>%
-  filter(lang.exposure != "in-group")-> outgroup_sing
-data_all_contrast%>%
-  filter(lang.exposure != "in-group")-> outgroup_contrast
-
-
-
-results%>%
   filter(lang.exposure == "in-group")-> ingroup
-data_all_sing%>%
-  filter(lang.exposure == "in-group")-> ingroup_sing
-outgroup_contrast%>%
-  filter(lang.exposure == "in-group")-> ingroup_contrast
 
 
 # check groups
@@ -145,55 +166,13 @@ ingroup%>%
    group_by(lang.exposure)%>%
   summarise(n_distinct(bilendi_id))->lang.ex_in
 
-
-
-# Sample Sizes
-
-
-
-outgroup_sing%>%
-  summarise(n_distinct(bilendi_id))->N_outgroup_sing
-outgroup_contrast%>%
-  summarise(n_distinct(bilendi_id))->N_outgroup_contrast
-
-
-
-
-```
-
-# exclude participants failing attention checks
-
-```{r setup3, include=FALSE}
-
-outgroup_sing%>%
-  ggplot(aes(x=Att.check_acc)) +
-  ggtitle ("Plot of Attention Check")+
-  xlab("accuracy attention check")+
-         geom_density()-> plot_attention
-
-outgroup_sing%>%
-  filter(Att.check_acc > 85)%>%
-  summarise(n_distinct(bilendi_id))-> pp_above_85atten
-
-outgroup_sing%>%
-  filter(Att.check_acc > 85)->outgroup_sing
-
-outgroup_sing%>%
-  ggplot(aes(x=Att.check_acc)) +
-  ggtitle ("Plot of Attention Check")+
-  xlab("accuracy attention check")+
-         geom_density()-> plot_attention
-
-plot_attention
-
-
 ```
 ## Plots raw data
 plot responses attributes
 ```{r plot responses attributes}
 
 # Charisma
-outgroup_sing%>%
+outgroup%>%
   filter (Attribute == "charismatisch")%>%
 ggplot(aes(x=Response)) +
   ggtitle ("Plot of Attribute Charisma")+
@@ -203,7 +182,7 @@ ggplot(aes(x=Response)) +
 plot_charisma
 
 
-outgroup_sing%>%
+outgroup%>%
   drop_na(Lang.Variety_Audio)%>%
 filter (Attribute == "charismatisch")%>%
 ggplot(aes(y=Response, x=Lang.Variety_Audio))+
@@ -212,7 +191,7 @@ geom_boxplot()+
 
 ## all attributes
 
-outgroup_sing%>%
+outgroup%>%
   drop_na(Lang.Variety_Audio)%>%
 ggplot(aes(y=Response, x=Attribute))+
 geom_boxplot()+
@@ -224,7 +203,7 @@ geom_boxplot()+
 ####PCA
 
 ```{r PCA_populism, echo=FALSE}
-outgroup_sing%>%
+outgroup%>%
   ungroup()%>%
   select(bilendi_id, populism_A, populism_B, populism_C, populism_D)-> PCA_pop_data
 
@@ -268,27 +247,27 @@ as_tibble(populism_dim)->populism_dim
 
 bind_cols(PCA_pop_data, populism_dim)->PCA_pop_data_final
 
-left_join (outgroup_sing, PCA_pop_data_final, by = c("bilendi_id", "populism_A", "populism_B", "populism_C", "populism_D"))-> outgroup_sing # 
+left_join (outgroup, PCA_pop_data_final, by = c("bilendi_id", "populism_A", "populism_B", "populism_C", "populism_D"))-> outgroup # 
   
-rename (outgroup_sing, populism_dim = value)-> outgroup_sing
+rename (outgroup, populism_dim = value)-> outgroup
 
 
 # scale
 
-scale (outgroup_sing$populism_dim)-> outgroup_sing$populism_dim
+scale (outgroup$populism_dim)-> outgroup$populism_dim
 ```
 *final dummy variables populism*
 create 2 dummy variables for populism a) mean of populism scores items A-C, but exclude pop D -> PCA shows very different b) use principal component 1 as dummy
 ```{r poplitical bckgr pop_dummies, echo=FALSE}
-outgroup_sing %>%
-  mutate(populism_all = rowMeans(across(c(populism_A, populism_B, populism_C), as.numeric, .names = "mean_{col}"), na.rm = TRUE)) -> outgroup_sing
+outgroup %>%
+  mutate(populism_all = rowMeans(across(c(populism_A, populism_B, populism_C), as.numeric, .names = "mean_{col}"), na.rm = TRUE)) -> outgroup
 
 # scale
 
-scale (outgroup_sing$populism_all)-> outgroup_sing$populism_all
+scale (outgroup$populism_all)-> outgroup$populism_all
 
 
-outgroup_sing%>%
+outgroup%>%
   distinct(bilendi_id, populism_all)%>%
 ggplot(aes(x=populism_all))+
   ggtitle("Plot of Populism Mean Scores") +
@@ -300,7 +279,7 @@ Plot_sum_pop1
 
 
 # add new populism dimension 1 of PCA
-as.numeric(outgroup_sing$populism_dim)-> outgroup_sing$populism_dim
+as.numeric(outgroup$populism_dim)-> outgroup$populism_dim
 
 populism_dim%>%
    ggplot(aes(x=value))+
@@ -316,7 +295,7 @@ Plot_sum_pop2
 ```{r political_bckgr}
 
 
-outgroup_sing%>%
+outgroup%>%
   ggplot(aes(x=political_spectrum))+
   ggtitle("Plot of Political Spectrum") +
          geom_density()+
@@ -329,7 +308,7 @@ Plot_polt.spec
 
 # Overview correlations nummeric variables partcipant background & Attributes
 ```{r corr matrix}
-outgroup_sing%>%
+outgroup%>%
   ungroup()%>%
   select(bilendi_id, Response, Attribute, Audio_Track, age, political_spectrum, populism_A, populism_B, populism_C, populism_D, populism_all, own_dialect, populism_dim)-> nummeric
 
@@ -360,7 +339,7 @@ plot_corr_matrix
 #ggsave(here ("output", "plot_corr_matrix.jpg"))
 ```
 
-
+# Consistency of character traits/ attributes
 ```{r PCA personality traits}
 
 
@@ -403,29 +382,29 @@ Effect moderated by own dialect usage: the more dialect usage the less positive 
 But effect not moderated by language exposure
 
 
-```{r glm_lang.var_chari, eval=FALSE, include=FALSE}
+```{r glm_lang.var_chari, echo=FALSE}
 
 
 # only charisma ratings
-outgroup_sing%>%
-  filter(Attribute=="charismatisch")->outgroup_sing_chari
+outgroup%>%
+  filter(Attribute=="charismatisch")->outgroup_chari
 
 
-outgroup_sing_chari$Lang.Variety_Audio = relevel(outgroup_sing_chari$Lang.Variety_Audio, ref = "Regional Variety")
+outgroup_chari$Lang.Variety_Audio = relevel(outgroup_chari$Lang.Variety_Audio, ref = "Regional Variety")
 
 # variable own dialect
 
-lmer (Response ~ Lang.Variety_Audio*own_dialect + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1_lang.var
+lmer (Response ~ Lang.Variety_Audio*own_dialect + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1_lang.var
 summary(model1_lang.var)
 anova(model1_lang.var)
 
 
 # variable language exposure
 
-outgroup_sing_chari$lang.exposure = relevel(outgroup_sing_chari$lang.exposure, ref = "standard_variety ")
+outgroup_chari$lang.exposure = relevel(outgroup_chari$lang.exposure, ref = "standard_variety ")
 
 
-lmer (Response ~ Lang.Variety_Audio*lang.exposure + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2_lang.var
+lmer (Response ~ Lang.Variety_Audio*lang.exposure + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2_lang.var
 summary(model2_lang.var)
 anova(model2_lang.var)
 
@@ -450,43 +429,39 @@ BUT:
 2.) Lang.Variety_Audio X pp gender approaching. sign. p= 0.06960 in separate 2-way interaction model
 
 ```{r glm_lang.var_chari_gender, eval=FALSE, include=FALSE}
-# only charisma ratings
-outgroup_sing%>%
-  filter(Attribute=="charismatisch")->outgroup_sing_chari
+
+outgroup_chari$Lang.Variety_Audio = relevel(outgroup_chari$Lang.Variety_Audio, ref = "Regional Variety")
 
 
-outgroup_sing_chari$Lang.Variety_Audio = relevel(outgroup_sing_chari$Lang.Variety_Audio, ref = "Regional Variety")
-
-
-outgroup_sing_chari%>%
-  filter(gender != "Divers")->outgroup_sing_chari
-outgroup_sing_chari$gender = relevel(outgroup_sing_chari$gender, ref = "Weiblich")
+outgroup_chari%>%
+  filter(gender != "Divers")->outgroup_chari
+outgroup_chari$gender = relevel(outgroup_chari$gender, ref = "Weiblich")
 
 
 
-# lmer (Response ~ Lang.Variety_Audio*Speaker_Gender*gender + Statement_no + Polit_ori +  own_dialect + (Lang.Variety_Audio*Speaker_Gender|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a # no convergence
+# lmer (Response ~ Lang.Variety_Audio*Speaker_Gender*gender + Statement_no + Polit_ori +  own_dialect + (Lang.Variety_Audio*Speaker_Gender|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a # no convergence
 
-#lmer (Response ~ Lang.Variety_Audio*Speaker_Gender*gender + Statement_no + Polit_ori +  own_dialect + (Lang.Variety_Audio+Speaker_Gender|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a # no convergence
+#lmer (Response ~ Lang.Variety_Audio*Speaker_Gender*gender + Statement_no + Polit_ori +  own_dialect + (Lang.Variety_Audio+Speaker_Gender|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a # no convergence
 
 # max model: 4 way interaction
-lmer (Response ~ Lang.Variety_Audio*Speaker_Gender*gender*own_dialect + Statement_no + Speaker +  + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> modelMax_gender
+lmer (Response ~ Lang.Variety_Audio*Speaker_Gender*gender*own_dialect + Statement_no + Speaker +  + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> modelMax_gender
 summary(modelMax_gender)
 anova(modelMax_gender)
 vcov(modelMax_gender)
 
 # only 3 way interaction
 
-lmer (Response ~ Lang.Variety_Audio*Speaker_Gender*gender + own_dialect + Statement_no + Speaker +  + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a
+lmer (Response ~ Lang.Variety_Audio*Speaker_Gender*gender + own_dialect + Statement_no + Speaker +  + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1a
 summary(model1a)
 anova(model1a)
 
 
-lmer (Response ~ Lang.Variety_Audio*Speaker_Gender*own_dialect  + Statement_no + Speaker +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1b
+lmer (Response ~ Lang.Variety_Audio*Speaker_Gender*own_dialect  + Statement_no + Speaker +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1b
 summary(model1b)
 anova(model1b)
 
 
-lmer (Response ~ Lang.Variety_Audio*gender*own_dialect  + Statement_no + Speaker +  + Speaker_Gender +(Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1c
+lmer (Response ~ Lang.Variety_Audio*gender*own_dialect  + Statement_no + Speaker +  + Speaker_Gender +(Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1c
 summary(model1c)
 anova(model1c)
 
@@ -505,7 +480,7 @@ plot_modelMax_gender
 ## lang. variety x speaker gender
 
 
-lmer (Response ~ Lang.Variety_Audio*Speaker_Gender  + Statement_no + Speaker + own_dialect + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2b
+lmer (Response ~ Lang.Variety_Audio*Speaker_Gender  + Statement_no + Speaker + own_dialect + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2b
 summary(model2b)
 anova(model2b)
 
@@ -513,27 +488,27 @@ anova(model2b)
 
 # lang. variety x pp gender
 
-lmer (Response ~ Lang.Variety_Audio*gender  + Statement_no + Speaker + Speaker_Gender+ own_dialect +(Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2c
+lmer (Response ~ Lang.Variety_Audio*gender  + Statement_no + Speaker + Speaker_Gender+ own_dialect +(Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2c
 summary(model2c)
 anova(model2c)
 
 
 # speaker gender x pp gender
 
-lmer (Response ~ Speaker_Gender*gender  + Statement_no + Speaker + Lang.Variety_Audio +own_dialect+ (Speaker_Gender|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2d
+lmer (Response ~ Speaker_Gender*gender  + Statement_no + Speaker + Lang.Variety_Audio +own_dialect+ (Speaker_Gender|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2d
 summary(model2d)
 anova(model2d)
 
 ## own_dialect x pp gender
 
 ### slope for female
-lmer (Response ~ own_dialect*gender  + Statement_no + Speaker + Lang.Variety_Audio + Speaker_Gender + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_dialect_pp_gender
+lmer (Response ~ own_dialect*gender  + Statement_no + Speaker + Lang.Variety_Audio + Speaker_Gender + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_dialect_pp_gender
 summary(model_dialect_pp_gender)
 anova(model_dialect_pp_gender)
 
 ### slope for male
-outgroup_sing_chari$gender = relevel(outgroup_sing_chari$gender, ref = "Männlich")
-lmer (Response ~ own_dialect*gender  + Statement_no + Speaker + Lang.Variety_Audio + Speaker_Gender + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_dialect_pp_gender
+outgroup_chari$gender = relevel(outgroup_chari$gender, ref = "Männlich")
+lmer (Response ~ own_dialect*gender  + Statement_no + Speaker + Lang.Variety_Audio + Speaker_Gender + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_dialect_pp_gender
 summary(model_dialect_pp_gender)
 anova(model_dialect_pp_gender)
 
@@ -572,22 +547,22 @@ interaction stimuli political orientation & pop. attitude pp -> the more populis
 
 ## Populism measure means of 3 different scales
 
-lmer (Response ~ Lang.Variety_Audio*populism_all*own_dialect + gender + age + education_school_sum + political_spectrum + Polit_ori +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1poli 
+lmer (Response ~ Lang.Variety_Audio*populism_all*own_dialect + gender + age + education_school_sum + political_spectrum + Polit_ori +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1poli 
 summary(model1poli)
 anova(model1poli)
 
 ## Populism measure dimension reduction
 
-outgroup_sing_chari$Lang.Variety_Audio = relevel(outgroup_sing_chari$Lang.Variety_Audio, ref = "Regional Variety")
+outgroup_chari$Lang.Variety_Audio = relevel(outgroup_chari$Lang.Variety_Audio, ref = "Regional Variety")
 
 # slope of Lang.Variety = Regional #1.340e-01
-lmer (Response ~ Lang.Variety_Audio*populism_dim*own_dialect + gender + age + education_school_sum + political_spectrum + Polit_ori +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2polia 
+lmer (Response ~ Lang.Variety_Audio*populism_dim*own_dialect + gender + age + education_school_sum + political_spectrum + Polit_ori +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2polia 
 summary(model2polia)
 
 # slope of populism for level Lang.Variety = Standard #  1.549e-01
-outgroup_sing_chari$Lang.Variety_Audio = relevel(outgroup_sing_chari$Lang.Variety_Audio, ref = "Standard German")
+outgroup_chari$Lang.Variety_Audio = relevel(outgroup_chari$Lang.Variety_Audio, ref = "Standard German")
 
-lmer (Response ~ Lang.Variety_Audio*populism_dim*own_dialect + gender + age + education_school_sum + political_spectrum + Polit_ori +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2polib
+lmer (Response ~ Lang.Variety_Audio*populism_dim*own_dialect + gender + age + education_school_sum + political_spectrum + Polit_ori +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2polib
 summary(model2polib)
 anova(model2polib)
 
@@ -598,7 +573,7 @@ plot_model2polib
 
 ## interaction stimuli political orientation & pop. attitude pp
 
-lmer (Response ~ Lang.Variety_Audio*populism_dim*Polit_ori  + gender + age + education_school_sum + political_spectrum +(Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model3poli 
+lmer (Response ~ Lang.Variety_Audio*populism_dim*Polit_ori  + gender + age + education_school_sum + political_spectrum +(Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model3poli 
 summary(model3poli)
 anova(model3poli)
 
@@ -609,11 +584,11 @@ plot_model3poli
 
 # populism & gender
 
-lmer (Response ~ Lang.Variety_Audio*populism_dim*gender + age + education_school_sum + own_dialect + political_spectrum + Polit_ori +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_pop_gender
+lmer (Response ~ Lang.Variety_Audio*populism_dim*gender + age + education_school_sum + own_dialect + political_spectrum + Polit_ori +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_pop_gender
 summary(model_pop_gender)
 anova(model_pop_gender)
 
-plot_model(model1polid, title = "Predicted values of charisma ratings", type = "pred", terms= c("populism_dim", "gender"), show.ci = T)+
+plot_model(model_pop_gender, title = "Predicted values of charisma ratings", type = "pred", terms= c("populism_dim", "gender"), show.ci = T)+
              ylab ("Charisma ratings")->plot_model_pop_gender
    
 plot_model_pop_gender
@@ -624,7 +599,7 @@ plot_model_pop_gender
 ```{r lang.pol_bckgr}
 # general backr: populism & party
 
-glmer ( party ~ political_spectrum  + gender + age + education_school_sum + populism_dim + own_dialect + (1|bilendi_id), data = outgroup_sing_chari, family = "binomial") -> model_poli_bckgr
+glmer ( party ~ political_spectrum  + gender + age + education_school_sum + populism_dim + own_dialect + (1|bilendi_id), data = outgroup_chari, family = "binomial") -> model_poli_bckgr
 summary(model_poli_bckgr) # takes 5 min, fails to converge
 anova(model_poli_bckgr)
 
@@ -634,33 +609,33 @@ plot_model(model3poli, title = "Predicted values of charisma ratings", type = "p
 # RQ: 4: Does SES moderate the effect of lang. variety on charisma ratings?
 
 ```{r lang_SES}
-lmer (Response ~ Lang.Variety_Audio*own_dialect*education_school_sum + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_lang.var_edu1
+lmer (Response ~ Lang.Variety_Audio*own_dialect*education_school_sum + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_lang.var_edu1
 summary(model_lang.var_edu1)
 anova(model_lang.var_edu1) # sig. interaction: own_dialect*education_school_sum + education_school_sum main effect approach sign.
 
-lmer (Response ~ Lang.Variety_Audio*own_dialect*education_school + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_lang.var_edu2
+lmer (Response ~ Lang.Variety_Audio*own_dialect*education_school + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_lang.var_edu2
 summary(model_lang.var_edu2) # own_dialect:education_school  approach sing.
 anova(model_lang.var_edu2)
 
-lmer (Response ~ Lang.Variety_Audio*own_dialect*education_profession1 + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_lang.var_edu3
+lmer (Response ~ Lang.Variety_Audio*own_dialect*education_profession1 + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_lang.var_edu3
 summary(model_lang.var_edu3) 
 anova(model_lang.var_edu3)#  Lang.Variety_Audio:own_dialect:education_profession1 approach sign
 
-lmer (Response ~ Lang.Variety_Audio*own_dialect*education_profession1_sum + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_lang.var_edu4
+lmer (Response ~ Lang.Variety_Audio*own_dialect*education_profession1_sum + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_lang.var_edu4
 summary(model_lang.var_edu4) 
 anova(model_lang.var_edu4) # own_dialect:education_profession1_sum                    sign.
 
 # Income
 
-levels(outgroup_sing_chari$income)
+levels(outgroup_chari$income)
 
-outgroup_sing_chari%>%
+outgroup_chari%>%
   filter(income != "Ich möchte die Frage nicht beantworten" & income !=
-                                                "Ich weiß nicht")->outgroup_sing_chari_income
+                                                "Ich weiß nicht")->outgroup_chari_income
   
 
 
-outgroup_sing_chari_income$income <- factor(outgroup_sing_chari_income$income, 
+outgroup_chari_income$income <- factor(outgroup_chari_income$income, 
                                      levels = c("10000 Euro und mehr", 
                                                 "7500 bis unter 10000 Euro", 
                                                 "5000 bis unter 7500 Euro", 
@@ -676,7 +651,7 @@ outgroup_sing_chari_income$income <- factor(outgroup_sing_chari_income$income,
                                                 "Unter 500 Euro"))
 
 
-lmer (Response ~ Lang.Variety_Audio*own_dialect*income + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_sing_chari_income,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_lang.var_edu5
+lmer (Response ~ Lang.Variety_Audio*own_dialect*income + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari_income,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_lang.var_edu5
 summary(model_lang.var_edu5) 
 anova(model_lang.var_edu5)# own_dialect:income sign.
 
@@ -706,82 +681,149 @@ plot_model_lang.var_edu1
 # Participant descriptives
 
 ```{r pp descriptives}
+# Sample sizes
+
+n_distinct(results$bilendi_id)
+n_distinct(data_all_sing$bilendi_id)
 
 
+
+n_distinct(ingroup$bilendi_id)
+n_distinct(outgroup$bilendi_id)
 
 
 ## check: participant background
 
 ### federal state
 
-outgroup_sing_chari%>%
+outgroup_chari%>%
   group_by(state_of_residence)%>%
   summarise(n_distinct(bilendi_id))->pp_state
 
 ### participant age
 
-outgroup_sing_chari%>%
+outgroup%>%
   ungroup()%>%
   drop_na(age)%>%
   summarise(mean(age), sd(age), min (age), max (age))->pp_age
 
 ### participant gender
 
-outgroup_sing_chari%>%
+outgroup%>%
   group_by(gender)%>%
   summarise(n_distinct(bilendi_id))->pp_gender_outgroup
 
-resultss%>%
+results%>%
   group_by(gender)%>%
   summarise(n_distinct(bilendi_id))->pp_gender_all
 
 
 ### sum_education_school
-outgroup_sing_chari%>%
+outgroup_chari%>%
   ungroup()%>%
   group_by(education_school_sum)%>%
   summarise(n_distinct(bilendi_id))->sum_education
 
 ### sum_profession
-outgroup_sing_chari%>%
+outgroup_chari%>%
   group_by(education_profession1_sum)%>%
   summarise(n_distinct(bilendi_id))->sum_profession1
 
 
 ### income
 
-outgroup_sing_chari%>%
+outgroup_chari%>%
   group_by(income)%>%
   summarise(n_distinct(bilendi_id))->income
 
 ### profession
 
-outgroup_sing_chari%>%
+outgroup_chari%>%
   group_by(profession)%>%
   summarise(n_distinct(bilendi_id))->sum_profession
 
 # language
 
-outgroup_sing_chari%>%
+outgroup_chari%>%
   group_by(lang.exposure)%>%
   summarise(n_distinct(bilendi_id))->sum_lang.exposure
 
-outgroup_sing_chari%>%
+outgroup_chari%>%
   ungroup()%>%
     drop_na(own_dialect)%>%
   summarise(mean(own_dialect), sd (own_dialect), min (own_dialect), max(own_dialect))->own_lang.variety 
 
 # party
 
-outgroup_sing_chari%>%
+outgroup_chari%>%
   group_by(party)%>%
   summarise(n_distinct(bilendi_id))->sum_party
 
 
 ## check randomization:
 
-outgroup_sing_chari%>%
+outgroup_chari%>%
   group_by(`randomiser-rtb5`,`counterbalance-nimi`, `counterbalance-x3xi`, `counterbalance-xq3l`)%>%
   summarise(n_distinct(bilendi_id))->random
+
+# check Audio Tracks
+
+outgroup%>%
+  group_by(bilendi_id)%>%
+  summarise(n_distinct(Audio_Track))->Audio_Track_outgroup
+```
+# Summary origin and authenticity of Audio Tracks/ Experimental Speakers
+
+
+```{r origin_authenticity}
+results%>%
+select(bilendi_id, Audio_Track_origin_non_st, Audio_Track_origin_st, `proximity_variety_non-st`, `identity_lang.variety_non-st`, proximity_variety_st,identity_lang.variety_st)%>%
+  distinct()->origin_authen_all
+
+## proximity to standard or non-standard variety
+
+origin_authen_all%>%
+  group_by(Audio_Track_origin_non_st)%>%
+  summarise(mean = mean(`proximity_variety_non-st`), sd = sd(`proximity_variety_non-st`), pp_ratings = n_distinct(bilendi_id))-> prox_non_st_audios
+
+prox_non_st_audios%>%
+  summarise(mean(mean), sd (sd), min(mean), max (mean), mean(pp_ratings), sd (pp_ratings), min(pp_ratings), max (pp_ratings) )-> overall_non_st_audio_proxi
+
+
+origin_authen_all%>%
+  group_by(Audio_Track_origin_st)%>%
+  summarise(mean = mean(`proximity_variety_st`), sd = sd(`proximity_variety_st`), pp_ratings = n_distinct(bilendi_id))-> prox_st_audios
+
+prox_st_audios%>%
+  summarise(mean(mean), sd (sd), min(mean), max (mean), mean(pp_ratings), sd (pp_ratings), min(pp_ratings), max (pp_ratings) )-> overall_st_audio_proxi
+
+## identity 
+
+origin_authen_all%>%
+  group_by(`identity_lang.variety_non-st`)%>%
+  summarise(n_distinct(bilendi_id))->audio_non_st_identity
+
+origin_authen_all%>%
+  group_by(`identity_lang.variety_st`)%>%
+  summarise(n_distinct(bilendi_id))->audio_st_identity
+ 
+
+
+
+```
+# Summary of imagined political level
+```{r political level}
+
+results%>%
+group_by(`Political level`)%>%
+summarise(n_distinct(bilendi_id))->political_level_all
+
+outgroup%>%
+group_by(`Political level`)%>%
+summarise(n_distinct(bilendi_id))->political_level_outgroup
+  
+
+
+
 ```
 
