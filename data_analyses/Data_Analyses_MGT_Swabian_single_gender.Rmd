@@ -384,7 +384,6 @@ But effect not moderated by language exposure
 
 ```{r glm_lang.var_chari, echo=FALSE}
 
-
 # only charisma ratings
 outgroup%>%
   filter(Attribute=="charismatisch")->outgroup_chari
@@ -394,9 +393,17 @@ outgroup_chari$Lang.Variety_Audio = relevel(outgroup_chari$Lang.Variety_Audio, r
 
 # variable own dialect
 
-lmer (Response ~ Lang.Variety_Audio*own_dialect + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1_lang.var
+# max.model
+
+lmer (Response ~ Lang.Variety_Audio*own_dialect*`Political level` + Statement_no + Speaker + deceived + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1_lang.var
 summary(model1_lang.var)
 anova(model1_lang.var)
+
+# best fit model
+
+lmer (Response ~ Lang.Variety_Audio*own_dialect + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> modelbest_fit_lang.var
+summary(modelbest_fit_lang.var)
+anova(modelbest_fit_lang.var)
 
 
 # variable language exposure
@@ -404,9 +411,11 @@ anova(model1_lang.var)
 outgroup_chari$lang.exposure = relevel(outgroup_chari$lang.exposure, ref = "standard_variety ")
 
 
-lmer (Response ~ Lang.Variety_Audio*lang.exposure + Statement_no + Speaker + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2_lang.var
+lmer (Response ~ Lang.Variety_Audio*lang.exposure + Statement_no + Speaker + deceived + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model2_lang.var
 summary(model2_lang.var)
 anova(model2_lang.var)
+
+
 
 # Plots
 
@@ -464,6 +473,10 @@ anova(model1b)
 lmer (Response ~ Lang.Variety_Audio*gender*own_dialect  + Statement_no + Speaker +  + Speaker_Gender +(Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1c
 summary(model1c)
 anova(model1c)
+
+lmer (Response ~ Lang.Variety_Audio*Speaker_Gender* `Political level`  + Statement_no + Speaker + gender + (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model1d
+summary(model1d)
+anova(model1d)
 
 # Plots 
 
@@ -539,7 +552,10 @@ plot_model_dialect_pp_gender
 
 main effect of populism. the more populist attitudes the more pos. rating of speakers in general
 
-interaction between lang. variety x populism dimension x own dialect usage
+no interaction between lang. variety x populism dimension x own dialect usage
+
+sign. interaction between populism dimension x own dialect usage:
+the more populist attitudes, the more dialect usage
 
 interaction stimuli political orientation & pop. attitude pp -> the more populist attitudes the more positive ratings of statements with right orientation
 
@@ -599,12 +615,36 @@ plot_model_pop_gender
 ```{r lang.pol_bckgr}
 # general backr: populism & party
 
-glmer ( party ~ political_spectrum  + gender + age + education_school_sum + populism_dim + own_dialect + (1|bilendi_id), data = outgroup_chari, family = "binomial") -> model_poli_bckgr
-summary(model_poli_bckgr) # takes 5 min, fails to converge
-anova(model_poli_bckgr)
+#glmer ( party ~ political_spectrum  + gender + age + education_school_sum + populism_dim + own_dialect + (1|bilendi_id), data = outgroup_chari, family = "binomial") -> model_poli_bckgr
+#summary(model_poli_bckgr) # takes 5 min, fails to converge
+#anova(model_poli_bckgr)
 
-plot_model(model3poli, title = "Predicted values of charisma ratings", type = "pred", terms= c("populism_dim", "Polit_ori"), show.ci = T)+
-             ylab ("Charisma ratings")->plot_model_poli_bckgr
+
+lmer (Response ~ Lang.Variety_Audio*political_spectrum*Polit_ori + age + gender + education_school_sum +  own_dialect +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_pol_spec1
+summary(model_pol_spec1)
+anova(model_pol_spec1)
+
+
+lmer (Response ~ Lang.Variety_Audio*political_spectrum*own_dialect + age + gender + education_school_sum +  Polit_ori +  (Lang.Variety_Audio|bilendi_id) +  (1|Audio_Track), data = outgroup_chari,  REML = TRUE, lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5))) -> model_pol_spec2
+summary(model_pol_spec2)
+anova(model_pol_spec2)
+
+
+
+plot_model(model_pol_spec1, title = "Predicted values of charisma ratings", type = "pred", terms= c("Lang.Variety_Audio",  "political_spectrum", "Polit_ori"))+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+             ylab ("Charisma ratings")->plot_model_poli_bckgr1
+plot_model_poli_bckgr1
+
+plot_model(model_pol_spec1, title = "Predicted values of charisma ratings", type = "pred", terms= c("political_spectrum", "Polit_ori"))+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+             ylab ("Charisma ratings")->plot_model_poli_bckgr_stat
+plot_model_poli_bckgr_stat
+
+
+
+
+
 ```
 # RQ: 4: Does SES moderate the effect of lang. variety on charisma ratings?
 
@@ -780,6 +820,10 @@ results%>%
 select(bilendi_id, Audio_Track_origin_non_st, Audio_Track_origin_st, `proximity_variety_non-st`, `identity_lang.variety_non-st`, proximity_variety_st,identity_lang.variety_st)%>%
   distinct()->origin_authen_all
 
+outgroup%>%
+select(bilendi_id, Audio_Track_origin_non_st, Audio_Track_origin_st, `proximity_variety_non-st`, `identity_lang.variety_non-st`, proximity_variety_st,identity_lang.variety_st)%>%
+  distinct()->origin_authen_outgr
+
 ## proximity to standard or non-standard variety
 
 origin_authen_all%>%
@@ -801,15 +845,15 @@ prox_st_audios%>%
 
 origin_authen_all%>%
   group_by(`identity_lang.variety_non-st`)%>%
-  summarise(n_distinct(bilendi_id))->audio_non_st_identity
+  summarise(n_distinct(bilendi_id))->audio_non_st_identity_all
+
+origin_authen_outgr%>%
+  group_by(`identity_lang.variety_non-st`)%>%
+  summarise(n_distinct(bilendi_id))->audio_non_st_identity_out
 
 origin_authen_all%>%
   group_by(`identity_lang.variety_st`)%>%
   summarise(n_distinct(bilendi_id))->audio_st_identity
- 
-
-
-
 ```
 # Summary of imagined political level
 ```{r political level}
@@ -821,9 +865,6 @@ summarise(n_distinct(bilendi_id))->political_level_all
 outgroup%>%
 group_by(`Political level`)%>%
 summarise(n_distinct(bilendi_id))->political_level_outgroup
-  
-
-
 
 ```
 
