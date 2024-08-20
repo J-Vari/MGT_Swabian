@@ -883,37 +883,66 @@ data_all %>%
 ```
 
 # Standardise open text answer caregiver language
-```{r questionnaire3-lang_pop_standardise, eval=FALSE, include=FALSE}
+```{r questionnaire3-lang_pop_standardise}
 
-pp_lang_pop %>%
-  mutate(Response_Text_Other_Dialect_check = ifelse(!is.na(Response_Text_Other_Dialect), str_to_lower(Response_Text_Other_Dialect), NA))-> pp_lang_pop
-  
+data_all %>%
+  mutate(Response_Text_Other_Dialect = str_replace_all(Response_Text_Other_Dialect, "\\s*\\bund\\b\\s*", ",")) %>% 
+  separate(Response_Text_Other_Dialect, 
+           into = c("Response_Text_Other_Dialect_1", "Response_Text_Other_Dialect_2"), 
+           sep = ",|/|\\s*\\bund\\b\\s*",
+           extra = "merge",
+           fill = "right") %>%
+  mutate(across(starts_with("Response_Text_Other_Dialect_"), str_trim)) %>%
+  mutate(across(starts_with("Response_Text_Other_Dialect_"), ~ if_else(.x == "Ich weiß nicht", "Ich weiß nicht", str_to_title(.x)))) -> data_all
 
-pp_lang_pop_test %>%
-  mutate(lang.caregivers_sub = case_when(
-    Response_Text_Other_Dialect %in% c("Berlin", "Berliner", "Berliner Deutsch", "Berliner Dialekt", "Berlinerisch") ~ "Berlinerisch",
-   Response_Text_Other_Dialect %in% c("Ruhrgebiet", "Ruhrpott", "Ruhrpottslang", "Ruhrdeutsch") ~ "Ruhrdeutsch",
-    Response_Text_Other_Dialect %in% c("Brandenburg", "Brandenburgisch") ~ "Brandenburgisch",
-    Response_Text_Other_Dialect %in% c("Fränkisch", "Plattdeutsch", "Bayrisch") ~ NA_character_,
-    TRUE ~ Response_Text_Other_Dialect
-  )) -> pp_lang_pop_test
+# standardization of the open text field answers
+data_all %>%
+  mutate(Response_Text_Other_Dialect_1 = case_when(
+    Response_Text_Other_Dialect_1 %in% c("Berlin", "Berliner", "Berliner Deutsch", "Berliner Dialekt") ~ "Berlinerisch",
+    Response_Text_Other_Dialect_1 %in% c("Ruhrgebiet", "Ruhrpott", "Ruhrpottslang") ~ "Ruhrdeutsch",
+    Response_Text_Other_Dialect_1 %in% c("Brandenburg") ~ "Brandenburgisch",
+    Response_Text_Other_Dialect_1 %in% c("Bayrisch") ~ "Bairisch",
+    TRUE ~ Response_Text_Other_Dialect_1 # standardization is only done to Response_Text_Other_Dialect_1 because Response_Text_Other_Dialect_2 doesn't have any values that need standardizing
+  )) -> data_all
 
 #### sort answers into existing categories
-pp_lang_pop_special %>%
-  mutate(lang.caregivers_hom = case_when(
-    `languages_caregivers-text` %in% c("Bayrisch", "Münchnerisch") ~ "Bairisch",
-    lang.caregivers_sub == "Berlinerisch" ~ "Ostdeutsch",
-    `languages_caregivers-text` %in% c("Russisch", "Ungarisch", "Venezianisch", "Polnisch") ~ "Dialekt/Sprache aus dem nicht-deutschsprachigen Ausland",
-    `languages_caregivers-text` %in% c("Ruhrgebiet", "Ruhrpott", "Ruhrpottslang", "Ruhrdeutsch") ~ "Ruhrdeutsch",
-    `languages_caregivers-text` %in% c("Mannheimerisch", "Oberpfälzerisch", "Kurpfälzisch") ~ "Pfälzisch",
-    `languages_caregivers-text` == "Rheinhessisch" ~ "Hessisch",
-    `languages_caregivers-text` %in% c("Niederösterreichisch", "Wienerisch") ~ "Österreichisch",
-    `languages_caregivers-text` %in% c("Schlesisch", "Oberlausitzer Dialekt", "Vogtlandisch (Fränkisch)", "Niederlausitzer Mundart", "Brandenburg", "Brandenburgisch", "Erzgebirgisch") ~ "Ostdeutsch",
-    `languages_caregivers-text` %in% c("Siegerländer Plattdeutsch", "Eifeler Deutsch") ~ "Moselfränkisch",
-    `languages_caregivers-text` == "Kölsch" ~ "Rheinisch",
-    `languages_caregivers-text` == "Fränkisch" ~ "Fränkisch",
-    `languages_caregivers-text` == "Plattdeutsch" ~ "Plattdeutsch"
-    )) -> pp_lang_pop_special
+data_all %>%
+  mutate(lang.exposure = case_when(
+    Response_Text_Other_Dialect_1 %in% c("Bairisch", "Münchnerisch") ~ "Bairisch",
+    Response_Text_Other_Dialect_1 == "Berlinerisch" ~ "Ostdeutsch",
+    Response_Text_Other_Dialect_1 %in% c("Russisch", "Ungarisch", "Venezianisch", "Polnisch") ~ "Dialekt/Sprache aus dem nicht-deutschsprachigen Ausland",
+    Response_Text_Other_Dialect_1 %in% c("Mannheimerisch", "Oberpfälzerisch", "Kurpfälzisch") ~ "Pfälzisch",
+    Response_Text_Other_Dialect_1 == "Rheinhessisch" ~ "Hessisch",
+    Response_Text_Other_Dialect_1 %in% c("Niederösterreichisch", "Wienerisch") ~ "Österreichisch",
+    Response_Text_Other_Dialect_1 %in% c("Schlesisch", "Oberlausitzer Dialekt", "Vogtlandisch (Fränkisch)", "Niederlausitzer Mundart", "Brandenburg", "Brandenburgisch", "Erzgebirgisch") ~ "Ostdeutsch",
+    Response_Text_Other_Dialect_1 %in% c("Siegerländer Plattdeutsch", "Eifeler Deutsch") ~ "Moselfränkisch",
+    Response_Text_Other_Dialect_1 == "Kölsch" ~ "Rheinisch",
+    Response_Text_Other_Dialect_1 == "Fränkisch" ~ "Fränkisch",
+    Response_Text_Other_Dialect_1 == "Plattdeutsch" ~ "Plattdeutsch",
+    TRUE ~ lang.exposure
+    )) -> data_all
+
+data_all %>%
+  mutate(lang.exposure = case_when(
+    Response_Text_Other_Dialect_2 %in% c("Oberlausitzer Dialekt", "Brandenburgisch") ~ "Ostdeutsch",
+    Response_Text_Other_Dialect_2 %in% c("Niederösterreichisch", "Wienerisch") ~ "Österreichisch",
+    TRUE ~ lang.exposure
+  )) -> data_all
+
+# turn Response_Text_Other_Dialect_1 and _2 into variables that represent more fine-grained dialects by deleting dialects from Response_Text_Other_Dialect_1 and _2 that are equal to one of the superordinate dialect categories in lang.exposure
+
+data_all %>%
+  mutate(Response_Text_Other_Dialect_1 = case_when(
+    Response_Text_Other_Dialect_1 %in% c("Hochdeutsch", "Alemannisch", "Badisch", "Bairisch", "Fränkisch", "Schweizerdeutsch", "Hessisch", "Moselfränkisch", "Norddeutsch", "Österreichisch", "Ostdeutsch", "Pfälzisch", "Rheinisch", "Saarländisch", "Sächsisch", "Schwäbisch", "Thüringisch", "Plattdeutsch", "Dialekt/Sprache aus dem nicht-deutschsprachigen Ausland", "Ich weiß nicht", "Anderer Dialekt") ~ NA,
+    TRUE ~ Response_Text_Other_Dialect_1
+  )) -> data_all
+
+# rename variables to make it more obvious that the variables represent specifications of the superordinate dialect categories
+data_all %>%
+  rename(Response_Text_Other_Dialect_Spec_1 = Response_Text_Other_Dialect_1,
+         Response_Text_Other_Dialect_Spec_2 = Response_Text_Other_Dialect_2) -> data_all
+
+
 ```
 # Transform lang. exposure into new variable in-/ outgroup lang. variety
 ```{r in_vs_outgroup, echo=TRUE}
@@ -931,7 +960,7 @@ as.factor(data_all$lang.exposure)->data_all$lang.exposure
 levels(data_all$lang.exposure)
 
 data_all%>%
-  select(-Response_Text_Other_Dialect)%>%
+  select(-Response_Text_Other_Dialect_Spec_1, -Response_Text_Other_Dialect_Spec_2)%>% # @Judit: in your code you are deleting the Response_Text_Other_Dialect variable. Therefore, I'm deleting the variables I created in the chunk above as well. If you want to keep them, you can delete this line of code.
   distinct()->data_all
 
 ```
