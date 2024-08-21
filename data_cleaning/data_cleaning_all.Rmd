@@ -800,6 +800,93 @@ questionnaire%>%
   ungroup()%>%
   summarise(n_distinct(`Participant Public ID`))#1315
 ```
+
+## standardize open text answers party 
+```{r standardize_party_other}
+# standardization of the open text field answers
+questionnaire %>%
+  rename(party_other = `party-text`) %>%
+  mutate(party_other = tolower(party_other)) %>%
+  mutate(party_other = str_trim(party_other))-> questionnaire
+
+questionnaire %>%
+  mutate(party_other = case_when(
+    party_other %in% c("die partei", "diepartei") ~ "Die PARTEI",
+    party_other %in% c("freie wähler", "fw") ~ "FREIE WÄHLER",
+    party_other %in% c("basis", "die basis") ~ "dieBasis",
+    party_other %in% c("piraten") ~ "PIRATEN",
+    party_other %in% c("pdh", "humanisten") ~ "PdH",
+    str_starts(party_other, "tierschutz") ~ "Tierschutzpartei",
+    party_other %in% c("vegan-partei") ~ "V-Partei",
+    str_starts(party_other, "keine") ~ "Keine",
+    party_other %in% c("dava") ~ "DAVA",
+    party_other %in% c("dib") ~ "DiB",
+    party_other %in% c("familien partei") ~ "FAMILIE",
+    party_other %in% c("graue panther", "letzte generation", "umweltpartei", "volt", "alternative") ~ str_to_title(party_other),
+    party_other %in% c("partei der schulmedizinischen verjüngungsforschung") ~ "Verjüngungsforschung",
+    party_other %in% c("weiß nicht") ~ "Ich weiß nicht",
+    party_other %in% c("ödp") ~ "ÖDP",
+    TRUE ~ party_other
+  )) -> questionnaire
+
+# copy the values to the variable party (only those where it is clear what the participants meant and that are real parties)
+questionnaire %>%
+  mutate(party = case_when(
+    party == "Andere" & !is.na(party_other) & !party_other %in% c("Alternative", "Ich weiß nicht", "Keine", "Umweltpartei") ~ party_other,
+    TRUE ~ party
+  )) -> questionnaire
+```
+
+## filter text answers other languages
+```{r filter_other_languages}
+# create a list of dialects, languages and countries (everything participants have mentioned in other caregiver languages and the rest is ChatGPT generated, so probably not complete)
+c("Niederdeutsch", "Nördliches Niederdeutsch", "Westniederdeutsch", "Südoldenburgisch", "Emsländisch", "Münsterländisch", "Westmünsterländisch", "Grafschafter Platt", "Nordniederdeutsch", "Schleswigsch", "Holsteinisch", "Dithmarscher Platt", "Oldenburger Platt", "Ostfriesisches Platt", "Nordhannoversch", "Mecklenburgisch-Vorpommersch", "Märkisch", "Nordmärkisch", "Mittelmärkisch", "Südmärkisch", "Mittelpommersch", "Südliches Niederdeutsch", "Westfälisch", "Ostwestfälisch", "Südwestfälisch", "Ostfälisch", "Kernostfälisch", "Göttingisch-Grubenhagensch", "Elbostfälisch", "Heideostfälisch", "Ostfälisch-nordniederdeutsch", "Ostfälisch-westfälisch", "Kleverländisch", "Standarddeutsch", "Mitteldeutsch", "Ostmitteldeutsch", "Thüringisch", "Nordobersächsisch", "Obersächsisch", "Westmitteldeutsch", "Moselfränkisch", "Siegerländer Platt", "Wäller Platt", "Rheinfränkisch-moselfränkisch", "Zentralhessisch-moselfränkisch", "Ripuarisch", "Nördliche Eifel", "Mittleres Erft- und Ruhrgebiet", "Aachener Land", "Bergisches Land", "Ripuarisch-niederfränkisch", "Nordbergischer Raum", "Rheinfränkisch", "Nordhessisch", "Osthessisch", "Mittelhessisch", "Oberdeutsch", "Ostfränkisch", "Unterfränkisch", "Oberfränkisch", "Bairisch", "Nordbairisch", "Mittelbairisch", "Südbairisch", "Fersentalerisch", "Alemannisch", "Schwäbisch", "Niederalemannisch", "Mittelalemannisch", "Hochalemannisch", "Höchstalemannisch", "Aachener Platt", "Berlinerisch", "Brandenburgisch", "Eifeler Deutsch", "Erzgebirgisch", "Harzer Plattdeutsch", "Kurpfälzisch", "Kölsch", "Mannheimerisch", "Münchnerisch", "Niederlausitzer Mundart", "Niederösterreichisch", "Oberpfälzerisch", "Polnisch", "Rheinhessisch", "Ruhrdeutsch", "Russisch", "Schlesisch", "Siegerländer Plattdeutsch", "Sudetendeutsch", "Ungarisch", "Venezianisch", "Vogtlandisch", "Westerwälder Platt","Westfälisches Platt", "Wuppertaler Platt", "Badisch", "Fränkisch", "Hessisch", "Norddeutsch", "Ostdeutsch", "Pfälzisch", "Plattdeutsch", "Rheinisch", "Saarländisch", "Schweizerdeutsch", "Sächsisch", "Österreichisch", "Bayrisch", "Türkisch", "Englisch", "Arabisch", "Italienisch", "Griechisch", "Spanisch", "Französisch", "Serbisch", "Kroatisch", "Bosnisch", "Rumänisch", "Kurdisch", "Portugiesisch", "Vietnamesisch", "Farsi", "Persisch", "Bulgarisch", "Albanisch", "Mandarin", "Chinesisch", "Tschechisch", "Ukrainisch", "Paschtu", "Tamilisch", "Hindi", "Thai", "Punjabi", "Hebräisch", "Somali", "Baden-Württemberg", "Bayern", "Berlin", "Brandenburg", "Bremen", "Hamburg", "Hessen", "Mecklenburg-Vorpommern", "Niedersachsen", "Nordrhein-Westfalen", "Rheinland-Pfalz", "Saarland", "Sachsen", "Sachsen-Anhalt", "Schleswig-Holstein", "Thüringen", "Hochdeutsch", "Schweiz", "Dänisch", "SChwedisch", "Norwegisch", "Dänemark", "Schweden", "Norwegen", "Finnland", "Finnisch", "Türkei", "USA", "UK", "Kanada", "Australien", "Neuseeland", "Ägypten", "Saudi-Arabien", "Irak", "Syrien", "Libanon", "Jordanien", "Italien", "Griechenland", "Spanien", "Mexiko", "Kolumbien", "Argentinien", "Frankreich", "Belgien", "Schweiz", "Serbien", "Kroatien", "Bosnien und Herzegowina", "Bosnien", "Rumänien", "Irak", "Syrien", "Iran", "Portugal", "Brasilien", "Angola", "Mosambik", "Vietnam", "Iran", "Bulgarien", "Albanien", "China", "Tschechien", "Ukraine", "Afghanistan", "Pakistan", "Indien", "Sri Lanka", "Thailand", "Israel", "Somalia", "Niederländisch", "Niederlande", "Holland", "Russland") -> varieties
+
+# Function to extract dialects and "Platt" along with preceding word
+extract_dialects <- function(other_languages, dialect_list) {
+  if (is.na(other_languages) || other_languages == "") {
+    return(NA_character_)
+  }
+  # Create a regex pattern that matches any dialect from the list
+  dialect_pattern <- str_c(str_c(dialect_list, collapse = "|"), collapse = "")
+  
+  # Regex pattern to match "Platt" and the preceding word
+  platt_pattern <- "\\b(\\w+\\sPlatt)\\b"
+  
+  # Find matches for dialects
+  dialect_matches <- str_extract_all(other_languages, regex(dialect_pattern, ignore_case = TRUE))[[1]]
+  
+  # Find matches for "Platt" and the preceding word
+  platt_matches <- str_extract_all(other_languages, regex(platt_pattern, ignore_case = TRUE))[[1]]
+  
+  # Combine both sets of matches
+  combined_matches <- unique(c(dialect_matches, platt_matches))
+  
+  # Remove duplicates and return as a comma-separated string
+  return(paste(unique(combined_matches), collapse = ", "))
+}
+
+# Apply the function to the dataset
+questionnaire %>%
+  mutate(filtered_dialects = sapply(other_languages, extract_dialects, varieties)) -> questionnaire
+
+# clean up
+questionnaire %>%
+  separate(filtered_dialects, into = c("other_languages_1", "other_languages_2", "other_languages_3", "other_languages_4", "other_languages_5"), sep = ",", extra = "merge", fill = "right") %>%
+  mutate(across(starts_with("other_languages_"), ~ na_if(., ""))) -> questionnaire
+
+questionnaire %>%
+  mutate(across(starts_with("other_languages_"), str_trim)) %>%
+  mutate(across(starts_with("other_languages_"), str_to_title)) -> questionnaire
+
+```
+
+```{r}
+questionnaire %>%
+  count(`profession-text`) -> count_prof
+```
+
+
 # combine questionaire with task data
 ```{r question_task_combine}
 # assign classes
@@ -941,8 +1028,6 @@ data_all %>%
 data_all %>%
   rename(Response_Text_Other_Dialect_Spec_1 = Response_Text_Other_Dialect_1,
          Response_Text_Other_Dialect_Spec_2 = Response_Text_Other_Dialect_2) -> data_all
-
-
 ```
 # Transform lang. exposure into new variable in-/ outgroup lang. variety
 ```{r in_vs_outgroup, echo=TRUE}
