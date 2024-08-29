@@ -839,8 +839,8 @@ questionnaire %>%
 
 ## filter text answers other languages
 ```{r filter_other_languages}
-# create a list of dialects, languages and countries (everything participants have mentioned in other caregiver languages and the rest is ChatGPT generated, so probably not complete)
-c("Niederdeutsch", "Nördliches Niederdeutsch", "Westniederdeutsch", "Südoldenburgisch", "Emsländisch", "Münsterländisch", "Westmünsterländisch", "Grafschafter Platt", "Nordniederdeutsch", "Schleswigsch", "Holsteinisch", "Dithmarscher Platt", "Oldenburger Platt", "Ostfriesisches Platt", "Nordhannoversch", "Mecklenburgisch-Vorpommersch", "Märkisch", "Nordmärkisch", "Mittelmärkisch", "Südmärkisch", "Mittelpommersch", "Südliches Niederdeutsch", "Westfälisch", "Ostwestfälisch", "Südwestfälisch", "Ostfälisch", "Kernostfälisch", "Göttingisch-Grubenhagensch", "Elbostfälisch", "Heideostfälisch", "Ostfälisch-nordniederdeutsch", "Ostfälisch-westfälisch", "Kleverländisch", "Standarddeutsch", "Mitteldeutsch", "Ostmitteldeutsch", "Thüringisch", "Nordobersächsisch", "Obersächsisch", "Westmitteldeutsch", "Moselfränkisch", "Siegerländer Platt", "Wäller Platt", "Rheinfränkisch-moselfränkisch", "Zentralhessisch-moselfränkisch", "Ripuarisch", "Nördliche Eifel", "Mittleres Erft- und Ruhrgebiet", "Aachener Land", "Bergisches Land", "Ripuarisch-niederfränkisch", "Nordbergischer Raum", "Rheinfränkisch", "Nordhessisch", "Osthessisch", "Mittelhessisch", "Oberdeutsch", "Ostfränkisch", "Unterfränkisch", "Oberfränkisch", "Bairisch", "Nordbairisch", "Mittelbairisch", "Südbairisch", "Fersentalerisch", "Alemannisch", "Schwäbisch", "Niederalemannisch", "Mittelalemannisch", "Hochalemannisch", "Höchstalemannisch", "Aachener Platt", "Berlinerisch", "Brandenburgisch", "Eifeler Deutsch", "Erzgebirgisch", "Harzer Plattdeutsch", "Kurpfälzisch", "Kölsch", "Mannheimerisch", "Münchnerisch", "Niederlausitzer Mundart", "Niederösterreichisch", "Oberpfälzerisch", "Polnisch", "Rheinhessisch", "Ruhrdeutsch", "Russisch", "Schlesisch", "Siegerländer Plattdeutsch", "Sudetendeutsch", "Ungarisch", "Venezianisch", "Vogtlandisch", "Westerwälder Platt","Westfälisches Platt", "Wuppertaler Platt", "Badisch", "Fränkisch", "Hessisch", "Norddeutsch", "Ostdeutsch", "Pfälzisch", "Plattdeutsch", "Rheinisch", "Saarländisch", "Schweizerdeutsch", "Sächsisch", "Österreichisch", "Bayrisch", "Türkisch", "Englisch", "Arabisch", "Italienisch", "Griechisch", "Spanisch", "Französisch", "Serbisch", "Kroatisch", "Bosnisch", "Rumänisch", "Kurdisch", "Portugiesisch", "Vietnamesisch", "Farsi", "Persisch", "Bulgarisch", "Albanisch", "Mandarin", "Chinesisch", "Tschechisch", "Ukrainisch", "Paschtu", "Tamilisch", "Hindi", "Thai", "Punjabi", "Hebräisch", "Somali", "Baden-Württemberg", "Bayern", "Berlin", "Brandenburg", "Bremen", "Hamburg", "Hessen", "Mecklenburg-Vorpommern", "Niedersachsen", "Nordrhein-Westfalen", "Rheinland-Pfalz", "Saarland", "Sachsen", "Sachsen-Anhalt", "Schleswig-Holstein", "Thüringen", "Hochdeutsch", "Schweiz", "Dänisch", "SChwedisch", "Norwegisch", "Dänemark", "Schweden", "Norwegen", "Finnland", "Finnisch", "Türkei", "USA", "UK", "Kanada", "Australien", "Neuseeland", "Ägypten", "Saudi-Arabien", "Irak", "Syrien", "Libanon", "Jordanien", "Italien", "Griechenland", "Spanien", "Mexiko", "Kolumbien", "Argentinien", "Frankreich", "Belgien", "Schweiz", "Serbien", "Kroatien", "Bosnien und Herzegowina", "Bosnien", "Rumänien", "Irak", "Syrien", "Iran", "Portugal", "Brasilien", "Angola", "Mosambik", "Vietnam", "Iran", "Bulgarien", "Albanien", "China", "Tschechien", "Ukraine", "Afghanistan", "Pakistan", "Indien", "Sri Lanka", "Thailand", "Israel", "Somalia", "Niederländisch", "Niederlande", "Holland", "Russland") -> varieties
+# create a list of dialects and federal states (everything participants have mentioned in other caregiver languages and the rest is ChatGPT generated, so probably not complete)
+c("Niederdeutsch", "Nördliches Niederdeutsch", "Westniederdeutsch", "Südoldenburgisch", "Emsländisch", "Münsterländisch", "Westmünsterländisch", "Grafschafter Platt", "Nordniederdeutsch", "Schleswigsch", "Holsteinisch", "Dithmarscher Platt", "Oldenburger Platt", "Ostfriesisches Platt", "Nordhannoversch", "Mecklenburgisch-Vorpommersch", "Märkisch", "Nordmärkisch", "Mittelmärkisch", "Südmärkisch", "Mittelpommersch", "Südliches Niederdeutsch", "Westfälisch", "Ostwestfälisch", "Südwestfälisch", "Ostfälisch", "Kernostfälisch", "Göttingisch-Grubenhagensch", "Elbostfälisch", "Heideostfälisch", "Ostfälisch-nordniederdeutsch", "Ostfälisch-westfälisch", "Kleverländisch", "Mitteldeutsch", "Ostmitteldeutsch", "Thüringisch", "Nordobersächsisch", "Obersächsisch", "Westmitteldeutsch", "Moselfränkisch", "Siegerländer Platt", "Wäller Platt", "Rheinfränkisch-moselfränkisch", "Zentralhessisch-moselfränkisch", "Ripuarisch", "Nördliche Eifel", "Mittleres Erft- und Ruhrgebiet", "Aachener Land", "Bergisches Land", "Ripuarisch-niederfränkisch", "Nordbergischer Raum", "Rheinfränkisch", "Nordhessisch", "Osthessisch", "Mittelhessisch", "Oberdeutsch", "Ostfränkisch", "Unterfränkisch", "Oberfränkisch", "Bairisch", "Nordbairisch", "Mittelbairisch", "Südbairisch", "Fersentalerisch", "Alemannisch", "Schwäbisch", "Niederalemannisch", "Mittelalemannisch", "Hochalemannisch", "Höchstalemannisch", "Aachener Platt", "Berlinerisch", "Brandenburgisch", "Eifeler Deutsch", "Erzgebirgisch", "Harzer Plattdeutsch", "Kurpfälzisch", "Kölsch", "Mannheimerisch", "Münchnerisch", "Niederlausitzer Mundart", "Oberpfälzerisch", "Schlesisch", "Siegerländer Plattdeutsch", "Sudetendeutsch", "Vogtlandisch", "Westerwälder Platt", "Westfälisches Platt", "Wuppertaler Platt", "Badisch", "Fränkisch", "Hessisch", "Norddeutsch", "Ostdeutsch", "Pfälzisch", "Plattdeutsch", "Rheinisch", "Saarländisch", "Sächsisch", "Bayrisch", "Ruhrdeutsch", "Baden-Württemberg", "Bayern", "Berlin", "Brandenburg", "Bremen", "Hamburg", "Hessen", "Mecklenburg-Vorpommern", "Niedersachsen", "Nordrhein-Westfalen", "Rheinland-Pfalz", "Saarland", "Sachsen", "Sachsen-Anhalt", "Schleswig-Holstein", "Thüringen", "Schweiz", "Österreich", "Schweizerdeutsch", "Österreichisch") -> dialects
 
 # Function to extract dialects and "Platt" along with preceding word
 extract_dialects <- function(other_languages, dialect_list) {
@@ -868,16 +868,27 @@ extract_dialects <- function(other_languages, dialect_list) {
 
 # Apply the function to the dataset
 questionnaire %>%
-  mutate(filtered_dialects = sapply(other_languages, extract_dialects, varieties)) -> questionnaire
+  mutate(filtered_dialects = sapply(other_languages, extract_dialects, dialects)) -> questionnaire
 
 # clean up
 questionnaire %>%
-  separate(filtered_dialects, into = c("other_languages_1", "other_languages_2", "other_languages_3", "other_languages_4", "other_languages_5"), sep = ",", extra = "merge", fill = "right") %>%
+  separate(filtered_dialects, into = c("other_languages_1", "other_languages_2", "other_languages_3", "other_languages_4"), sep = ",", extra = "merge", fill = "right") %>%
   mutate(across(starts_with("other_languages_"), ~ na_if(., ""))) -> questionnaire
 
 questionnaire %>%
   mutate(across(starts_with("other_languages_"), str_trim)) %>%
   mutate(across(starts_with("other_languages_"), str_to_title)) -> questionnaire
+
+#generalize answers and save them to other_languages
+questionnaire %>%
+  mutate(other_languages = case_when(
+    rowSums(!is.na(select(., starts_with("other_languages_"))) & select(., starts_with("other_languages_")) == "Schwäbisch") > 0 ~ "Schwäbisch",
+    rowSums(!is.na(select(., starts_with("other_languages_"))) & select(., starts_with("other_languages_")) != "Schwäbisch") > 0 ~ "Other dialect",
+    TRUE ~ NA_character_
+  )) -> questionnaire
+
+questionnaire %>%
+  select(-other_languages_1, -other_languages_2, -other_languages_3, -other_languages_4) -> questionnaire
 
 ```
 
