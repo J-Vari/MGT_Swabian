@@ -8,7 +8,7 @@ editor_options:
 ---
 # load libraries for cleaning
 ```{r libraries, include=FALSE}
-library (dplyr)
+library(dplyr)
 library(broom)
 library(tidyverse)
 library(corrr)
@@ -800,6 +800,104 @@ questionnaire%>%
   ungroup()%>%
   summarise(n_distinct(`Participant Public ID`))#1315
 ```
+
+## standardize open text answers party 
+```{r standardize_party_other}
+# standardization of the open text field answers
+questionnaire %>%
+  rename(party_other = `party-text`) %>%
+  mutate(party_other = tolower(party_other)) %>%
+  mutate(party_other = str_trim(party_other))-> questionnaire
+
+questionnaire %>%
+  mutate(party_other = case_when(
+    party_other %in% c("die partei", "diepartei") ~ "Die PARTEI",
+    party_other %in% c("freie wähler", "fw") ~ "FREIE WÄHLER",
+    party_other %in% c("basis", "die basis") ~ "dieBasis",
+    party_other %in% c("piraten") ~ "PIRATEN",
+    party_other %in% c("pdh", "humanisten") ~ "PdH",
+    str_starts(party_other, "tierschutz") ~ "Tierschutzpartei",
+    party_other %in% c("vegan-partei") ~ "V-Partei",
+    str_starts(party_other, "keine") ~ "Keine",
+    party_other %in% c("dava") ~ "DAVA",
+    party_other %in% c("dib") ~ "DiB",
+    party_other %in% c("familien partei") ~ "FAMILIE",
+    party_other %in% c("graue panther", "letzte generation", "umweltpartei", "volt", "alternative") ~ str_to_title(party_other),
+    party_other %in% c("partei der schulmedizinischen verjüngungsforschung") ~ "Verjüngungsforschung",
+    party_other %in% c("weiß nicht") ~ "Ich weiß nicht",
+    party_other %in% c("ödp") ~ "ÖDP",
+    TRUE ~ party_other
+  )) -> questionnaire
+
+# copy the values to the variable party (only those where it is clear what the participants meant and that are real parties)
+questionnaire %>%
+  mutate(party = case_when(
+    party == "Andere" & !is.na(party_other) & !party_other %in% c("Alternative", "Ich weiß nicht", "Keine", "Umweltpartei") ~ party_other,
+    TRUE ~ party
+  )) -> questionnaire
+```
+
+## filter text answers other languages
+```{r filter_other_languages}
+# create a list of dialects and federal states (everything participants have mentioned in other caregiver languages and the rest is ChatGPT generated, so probably not complete)
+c("Niederdeutsch", "Nördliches Niederdeutsch", "Westniederdeutsch", "Südoldenburgisch", "Emsländisch", "Münsterländisch", "Westmünsterländisch", "Grafschafter Platt", "Nordniederdeutsch", "Schleswigsch", "Holsteinisch", "Dithmarscher Platt", "Oldenburger Platt", "Ostfriesisches Platt", "Nordhannoversch", "Mecklenburgisch-Vorpommersch", "Märkisch", "Nordmärkisch", "Mittelmärkisch", "Südmärkisch", "Mittelpommersch", "Südliches Niederdeutsch", "Westfälisch", "Ostwestfälisch", "Südwestfälisch", "Ostfälisch", "Kernostfälisch", "Göttingisch-Grubenhagensch", "Elbostfälisch", "Heideostfälisch", "Ostfälisch-nordniederdeutsch", "Ostfälisch-westfälisch", "Kleverländisch", "Mitteldeutsch", "Ostmitteldeutsch", "Thüringisch", "Nordobersächsisch", "Obersächsisch", "Westmitteldeutsch", "Moselfränkisch", "Siegerländer Platt", "Wäller Platt", "Rheinfränkisch-moselfränkisch", "Zentralhessisch-moselfränkisch", "Ripuarisch", "Nördliche Eifel", "Mittleres Erft- und Ruhrgebiet", "Aachener Land", "Bergisches Land", "Ripuarisch-niederfränkisch", "Nordbergischer Raum", "Rheinfränkisch", "Nordhessisch", "Osthessisch", "Mittelhessisch", "Oberdeutsch", "Ostfränkisch", "Unterfränkisch", "Oberfränkisch", "Bairisch", "Nordbairisch", "Mittelbairisch", "Südbairisch", "Fersentalerisch", "Alemannisch", "Schwäbisch", "Niederalemannisch", "Mittelalemannisch", "Hochalemannisch", "Höchstalemannisch", "Aachener Platt", "Berlinerisch", "Brandenburgisch", "Eifeler Deutsch", "Erzgebirgisch", "Harzer Plattdeutsch", "Kurpfälzisch", "Kölsch", "Mannheimerisch", "Münchnerisch", "Niederlausitzer Mundart", "Oberpfälzerisch", "Schlesisch", "Siegerländer Plattdeutsch", "Sudetendeutsch", "Vogtlandisch", "Westerwälder Platt", "Westfälisches Platt", "Wuppertaler Platt", "Badisch", "Fränkisch", "Hessisch", "Norddeutsch", "Ostdeutsch", "Pfälzisch", "Plattdeutsch", "Rheinisch", "Saarländisch", "Sächsisch", "Bayrisch", "Ruhrdeutsch", "Baden-Württemberg", "Bayern", "Berlin", "Brandenburg", "Bremen", "Hamburg", "Hessen", "Mecklenburg-Vorpommern", "Niedersachsen", "Nordrhein-Westfalen", "Rheinland-Pfalz", "Saarland", "Sachsen", "Sachsen-Anhalt", "Schleswig-Holstein", "Thüringen", "Schweiz", "Österreich", "Schweizerdeutsch", "Österreichisch") -> dialects
+
+# Function to extract dialects and "Platt" along with preceding word
+extract_dialects <- function(other_languages, dialect_list) {
+  if (is.na(other_languages) || other_languages == "") {
+    return(NA_character_)
+  }
+  # Create a regex pattern that matches any dialect from the list
+  dialect_pattern <- str_c(str_c(dialect_list, collapse = "|"), collapse = "")
+  
+  # Regex pattern to match "Platt" and the preceding word
+  platt_pattern <- "\\b(\\w+\\sPlatt)\\b"
+  
+  # Find matches for dialects
+  dialect_matches <- str_extract_all(other_languages, regex(dialect_pattern, ignore_case = TRUE))[[1]]
+  
+  # Find matches for "Platt" and the preceding word
+  platt_matches <- str_extract_all(other_languages, regex(platt_pattern, ignore_case = TRUE))[[1]]
+  
+  # Combine both sets of matches
+  combined_matches <- unique(c(dialect_matches, platt_matches))
+  
+  # Remove duplicates and return as a comma-separated string
+  return(paste(unique(combined_matches), collapse = ", "))
+}
+
+# Apply the function to the dataset
+questionnaire %>%
+  mutate(filtered_dialects = sapply(other_languages, extract_dialects, dialects)) -> questionnaire
+
+# clean up
+questionnaire %>%
+  separate(filtered_dialects, into = c("other_languages_1", "other_languages_2", "other_languages_3", "other_languages_4"), sep = ",", extra = "merge", fill = "right") %>%
+  mutate(across(starts_with("other_languages_"), ~ na_if(., ""))) -> questionnaire
+
+questionnaire %>%
+  mutate(across(starts_with("other_languages_"), str_trim)) %>%
+  mutate(across(starts_with("other_languages_"), str_to_title)) -> questionnaire
+
+#generalize answers and save them to other_languages
+questionnaire %>%
+  mutate(other_languages = case_when(
+    rowSums(!is.na(select(., starts_with("other_languages_"))) & select(., starts_with("other_languages_")) == "Schwäbisch") > 0 ~ "Schwäbisch",
+    rowSums(!is.na(select(., starts_with("other_languages_"))) & select(., starts_with("other_languages_")) != "Schwäbisch") > 0 ~ "Other dialect",
+    TRUE ~ NA_character_
+  )) -> questionnaire
+
+questionnaire %>%
+  select(-other_languages_1, -other_languages_2, -other_languages_3, -other_languages_4) -> questionnaire
+
+```
+
+```{r}
+questionnaire %>%
+  count(`profession-text`) -> count_prof
+```
+
+
 # combine questionaire with task data
 ```{r question_task_combine}
 # assign classes
@@ -883,37 +981,64 @@ data_all %>%
 ```
 
 # Standardise open text answer caregiver language
-```{r questionnaire3-lang_pop_standardise, eval=FALSE, include=FALSE}
+```{r questionnaire3-lang_pop_standardise}
 
-pp_lang_pop %>%
-  mutate(Response_Text_Other_Dialect_check = ifelse(!is.na(Response_Text_Other_Dialect), str_to_lower(Response_Text_Other_Dialect), NA))-> pp_lang_pop
-  
+data_all %>%
+  mutate(Response_Text_Other_Dialect = str_replace_all(Response_Text_Other_Dialect, "\\s*\\bund\\b\\s*", ",")) %>% 
+  separate(Response_Text_Other_Dialect, 
+           into = c("Response_Text_Other_Dialect_1", "Response_Text_Other_Dialect_2"), 
+           sep = ",|/|\\s*\\bund\\b\\s*",
+           extra = "merge",
+           fill = "right") %>%
+  mutate(across(starts_with("Response_Text_Other_Dialect_"), str_trim)) %>%
+  mutate(across(starts_with("Response_Text_Other_Dialect_"), ~ if_else(.x == "Ich weiß nicht", "Ich weiß nicht", str_to_title(.x)))) -> data_all
 
-pp_lang_pop_test %>%
-  mutate(lang.caregivers_sub = case_when(
-    Response_Text_Other_Dialect %in% c("Berlin", "Berliner", "Berliner Deutsch", "Berliner Dialekt", "Berlinerisch") ~ "Berlinerisch",
-   Response_Text_Other_Dialect %in% c("Ruhrgebiet", "Ruhrpott", "Ruhrpottslang", "Ruhrdeutsch") ~ "Ruhrdeutsch",
-    Response_Text_Other_Dialect %in% c("Brandenburg", "Brandenburgisch") ~ "Brandenburgisch",
-    Response_Text_Other_Dialect %in% c("Fränkisch", "Plattdeutsch", "Bayrisch") ~ NA_character_,
-    TRUE ~ Response_Text_Other_Dialect
-  )) -> pp_lang_pop_test
+# standardization of the open text field answers
+data_all %>%
+  mutate(Response_Text_Other_Dialect_1 = case_when(
+    Response_Text_Other_Dialect_1 %in% c("Berlin", "Berliner", "Berliner Deutsch", "Berliner Dialekt") ~ "Berlinerisch",
+    Response_Text_Other_Dialect_1 %in% c("Ruhrgebiet", "Ruhrpott", "Ruhrpottslang") ~ "Ruhrdeutsch",
+    Response_Text_Other_Dialect_1 %in% c("Brandenburg") ~ "Brandenburgisch",
+    Response_Text_Other_Dialect_1 %in% c("Bayrisch") ~ "Bairisch",
+    TRUE ~ Response_Text_Other_Dialect_1 # standardization is only done to Response_Text_Other_Dialect_1 because Response_Text_Other_Dialect_2 doesn't have any values that need standardizing
+  )) -> data_all
 
 #### sort answers into existing categories
-pp_lang_pop_special %>%
-  mutate(lang.caregivers_hom = case_when(
-    `languages_caregivers-text` %in% c("Bayrisch", "Münchnerisch") ~ "Bairisch",
-    lang.caregivers_sub == "Berlinerisch" ~ "Ostdeutsch",
-    `languages_caregivers-text` %in% c("Russisch", "Ungarisch", "Venezianisch", "Polnisch") ~ "Dialekt/Sprache aus dem nicht-deutschsprachigen Ausland",
-    `languages_caregivers-text` %in% c("Ruhrgebiet", "Ruhrpott", "Ruhrpottslang", "Ruhrdeutsch") ~ "Ruhrdeutsch",
-    `languages_caregivers-text` %in% c("Mannheimerisch", "Oberpfälzerisch", "Kurpfälzisch") ~ "Pfälzisch",
-    `languages_caregivers-text` == "Rheinhessisch" ~ "Hessisch",
-    `languages_caregivers-text` %in% c("Niederösterreichisch", "Wienerisch") ~ "Österreichisch",
-    `languages_caregivers-text` %in% c("Schlesisch", "Oberlausitzer Dialekt", "Vogtlandisch (Fränkisch)", "Niederlausitzer Mundart", "Brandenburg", "Brandenburgisch", "Erzgebirgisch") ~ "Ostdeutsch",
-    `languages_caregivers-text` %in% c("Siegerländer Plattdeutsch", "Eifeler Deutsch") ~ "Moselfränkisch",
-    `languages_caregivers-text` == "Kölsch" ~ "Rheinisch",
-    `languages_caregivers-text` == "Fränkisch" ~ "Fränkisch",
-    `languages_caregivers-text` == "Plattdeutsch" ~ "Plattdeutsch"
-    )) -> pp_lang_pop_special
+data_all %>%
+  mutate(lang.exposure = case_when(
+    Response_Text_Other_Dialect_1 %in% c("Bairisch", "Münchnerisch") ~ "Bairisch",
+    Response_Text_Other_Dialect_1 == "Berlinerisch" ~ "Ostdeutsch",
+    Response_Text_Other_Dialect_1 %in% c("Russisch", "Ungarisch", "Venezianisch", "Polnisch") ~ "Dialekt/Sprache aus dem nicht-deutschsprachigen Ausland",
+    Response_Text_Other_Dialect_1 %in% c("Mannheimerisch", "Oberpfälzerisch", "Kurpfälzisch") ~ "Pfälzisch",
+    Response_Text_Other_Dialect_1 == "Rheinhessisch" ~ "Hessisch",
+    Response_Text_Other_Dialect_1 %in% c("Niederösterreichisch", "Wienerisch") ~ "Österreichisch",
+    Response_Text_Other_Dialect_1 %in% c("Schlesisch", "Oberlausitzer Dialekt", "Vogtlandisch (Fränkisch)", "Niederlausitzer Mundart", "Brandenburg", "Brandenburgisch", "Erzgebirgisch") ~ "Ostdeutsch",
+    Response_Text_Other_Dialect_1 %in% c("Siegerländer Plattdeutsch", "Eifeler Deutsch") ~ "Moselfränkisch",
+    Response_Text_Other_Dialect_1 == "Kölsch" ~ "Rheinisch",
+    Response_Text_Other_Dialect_1 == "Fränkisch" ~ "Fränkisch",
+    Response_Text_Other_Dialect_1 == "Plattdeutsch" ~ "Plattdeutsch",
+    TRUE ~ lang.exposure
+    )) -> data_all
+
+data_all %>%
+  mutate(lang.exposure = case_when(
+    Response_Text_Other_Dialect_2 %in% c("Oberlausitzer Dialekt", "Brandenburgisch") ~ "Ostdeutsch",
+    Response_Text_Other_Dialect_2 %in% c("Niederösterreichisch", "Wienerisch") ~ "Österreichisch",
+    TRUE ~ lang.exposure
+  )) -> data_all
+
+# turn Response_Text_Other_Dialect_1 and _2 into variables that represent more fine-grained dialects by deleting dialects from Response_Text_Other_Dialect_1 and _2 that are equal to one of the superordinate dialect categories in lang.exposure
+
+data_all %>%
+  mutate(Response_Text_Other_Dialect_1 = case_when(
+    Response_Text_Other_Dialect_1 %in% c("Hochdeutsch", "Alemannisch", "Badisch", "Bairisch", "Fränkisch", "Schweizerdeutsch", "Hessisch", "Moselfränkisch", "Norddeutsch", "Österreichisch", "Ostdeutsch", "Pfälzisch", "Rheinisch", "Saarländisch", "Sächsisch", "Schwäbisch", "Thüringisch", "Plattdeutsch", "Dialekt/Sprache aus dem nicht-deutschsprachigen Ausland", "Ich weiß nicht", "Anderer Dialekt") ~ NA,
+    TRUE ~ Response_Text_Other_Dialect_1
+  )) -> data_all
+
+# rename variables to make it more obvious that the variables represent specifications of the superordinate dialect categories
+data_all %>%
+  rename(Response_Text_Other_Dialect_Spec_1 = Response_Text_Other_Dialect_1,
+         Response_Text_Other_Dialect_Spec_2 = Response_Text_Other_Dialect_2) -> data_all
 ```
 # Transform lang. exposure into new variable in-/ outgroup lang. variety
 ```{r in_vs_outgroup, echo=TRUE}
@@ -931,7 +1056,7 @@ as.factor(data_all$lang.exposure)->data_all$lang.exposure
 levels(data_all$lang.exposure)
 
 data_all%>%
-  select(-Response_Text_Other_Dialect)%>%
+  select(-Response_Text_Other_Dialect_Spec_1, -Response_Text_Other_Dialect_Spec_2)%>% # @Judit: in your code you are deleting the Response_Text_Other_Dialect variable. Therefore, I'm deleting the variables I created in the chunk above as well. If you want to keep them, you can delete this line of code.
   distinct()->data_all
 
 ```
